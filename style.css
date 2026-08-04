@@ -1,0 +1,536 @@
+/* ==========================================================================
+   styles.css - Identidade Visual Base e Extensões SaaS
+   ========================================================================== */
+
+:root {
+  --bg: #F5F7F2;
+  --paper: #FFFFFF;
+  --ink: #16241F;
+  --ink-soft: #4B5A53;
+  --brand: #0E6B4F;
+  --brand-dark: #0A4E3A;
+  --steel: #2C4A63;
+  --accent: #C89B3C;
+  --danger: #B3432B;
+  --line: #DEE3DA;
+  --line-soft: #EAEDE6;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); }
+
+/* Estrutura Principal App */
+.nfe-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.nfe-shell {
+  display: flex;
+  flex: 1;
+}
+
+/* Barra Lateral (Sidebar) */
+.nfe-sidebar {
+  width: 80px;
+  background: var(--paper);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  gap: 16px;
+}
+.nfe-side-logo {
+  color: var(--brand);
+  margin-bottom: 24px;
+}
+.nfe-side-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 500;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.nfe-side-btn svg { width: 20px; height: 20px; }
+.nfe-side-btn:hover { background: var(--line-soft); color: var(--ink); }
+.nfe-side-btn.active { background: var(--brand); color: white; }
+
+/* Área de Conteúdo Principal */
+.nfe-main {
+  flex: 1;
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+.nfe-tab-panel { display: none; }
+.nfe-tab-panel.active { display: block; }
+
+/* Tipografia & Headings */
+.nfe-eyebrow { font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; letter-spacing: 0.1em; font-size: 12px; font-weight: 700; color: var(--brand); margin: 0 0 8px 0; }
+.nfe-title { font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: var(--ink); margin: 0 0 12px 0; letter-spacing: -0.02em; }
+.nfe-sub { font-size: 16px; color: var(--ink-soft); margin: 0 0 32px 0; line-height: 1.5; max-width: 600px; }
+
+/* Botões */
+.nfe-btn {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nfe-btn:hover { background: var(--line-soft); border-color: var(--ink-soft); }
+.nfe-btn-primary { background: var(--brand); color: white; border-color: var(--brand); }
+.nfe-btn-primary:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+.nfe-icon-btn { background: transparent; border: none; font-size: 18px; color: var(--ink-soft); cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.nfe-icon-btn:hover { background: var(--line-soft); color: var(--ink); }
+
+/* Dropzone de Upload */
+.nfe-drop {
+  border: 2px dashed var(--line);
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nfe-drop:hover { border-color: var(--brand); background: var(--line-soft); }
+.nfe-drop input { display: none; }
+.nfe-drop-icon { width: 48px; height: 48px; background: var(--line-soft); color: var(--brand); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.nfe-drop-text { font-weight: 600; font-size: 16px; color: var(--ink); margin-bottom: 4px; }
+.nfe-drop-sub { font-size: 14px; color: var(--ink-soft); }
+
+/* Card "Já tem a chave de acesso?" */
+.nfe-chave-consulta {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-top: 20px;
+}
+.nfe-chave-consulta-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.nfe-chave-consulta-icon {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  background: var(--line-soft);
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nfe-chave-consulta-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.nfe-chave-consulta-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  max-width: 640px;
+}
+.nfe-chave-consulta-row {
+  display: flex;
+}
+.nfe-chave-consulta-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+}
+.nfe-chave-consulta-row input::placeholder { color: var(--ink-soft); opacity: 0.7; }
+.nfe-chave-consulta-row input:focus { outline: none; border-color: var(--brand); }
+.nfe-chave-consulta-row button {
+  border-radius: 0 10px 10px 0;
+  white-space: nowrap;
+}
+.nfe-chave-consulta-msg {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 16px;
+}
+.nfe-chave-consulta-msg.success { color: var(--brand-dark); }
+.nfe-chave-consulta-msg.error { color: var(--danger); }
+@media(max-width: 640px) {
+  .nfe-chave-consulta-row { flex-direction: column; }
+  .nfe-chave-consulta-row input { border-radius: 10px; border-right: 1px solid var(--line); margin-bottom: 8px; }
+  .nfe-chave-consulta-row button { border-radius: 10px; }
+}
+
+/* Caixa de Erro / Mensagens */
+.nfe-error { display: none; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-top: 16px; font-weight: 500; }
+.nfe-error.show { display: block; background: #FBEEEA; color: var(--danger); border: 1px solid rgba(179,67,43,0.1); }
+
+/* Seção de Resultados e Preview da Nota */
+.nfe-result { display: none; margin-top: 40px; }
+.nfe-result.show { display: block; }
+.nfe-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+
+/* Componente do Card da Nota Fiscal */
+.nfe-doc { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: 0 4px 12px rgba(22,36,31,0.02); }
+.nfe-doc-head { padding: 32px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #FFFFFF 0%, var(--line-soft) 100%); }
+.nfe-doc-toprow { display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; }
+.nfe-nat { font-size: 14px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0; }
+.nfe-meta { font-size: 13px; color: var(--ink-soft); }
+.nfe-numserie { text-align: right; }
+.nfe-numserie .n { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--ink); }
+.nfe-numserie .s { font-size: 11px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.05em; }
+.nfe-chave-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+.nfe-chave-label { font-size: 10px; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.05em; margin-bottom: 2px; }
+.nfe-chave { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink); word-break: break-all; }
+.nfe-section { padding: 32px; border-bottom: 1px solid var(--line); }
+.nfe-section:last-child { border-bottom: none; }
+.nfe-section-label { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; color: var(--ink-soft); letter-spacing: 0.05em; margin: 0 0 16px 0; }
+.nfe-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.nfe-party-role { font-size: 11px; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.nfe-party-name { font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.nfe-party-doc { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink-soft); }
+.nfe-total-hero { display: flex; justify-content: space-between; align-items: center; background: var(--line-soft); padding: 24px 32px; border-radius: 10px; }
+.nfe-total-hero-label { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; color: var(--ink-soft); }
+.nfe-total-hero-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; color: var(--brand-dark); }
+
+/* Badges de Status (SaaS & Concorrência) */
+.nfe-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #EAF6EF; color: var(--brand-dark); }
+.nfe-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+.nfe-status-warn { background: #FCF4E7; color: #8F6B1B; }
+.nfe-status-warn .nfe-status-dot { background: var(--accent); }
+
+/* Tabela de Notas e Itens */
+.nfe-bank-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px; box-shadow: 0 4px 12px rgba(22,36,31,0.02); }
+.nfe-bank-header { margin-bottom: 24px; }
+.nfe-search-box { position: relative; margin-bottom: 20px; }
+.nfe-search-box input { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--line); font-family: 'Inter', sans-serif; font-size: 14px; }
+.nfe-search-box input:focus { outline: none; border-color: var(--brand); }
+.nfe-bank-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: var(--ink-soft); }
+.nfe-table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.nfe-items { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+.nfe-items th { background: var(--line-soft); padding: 14px 16px; font-weight: 600; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+.nfe-items td { padding: 16px; border-bottom: 1px solid var(--line); color: var(--ink); }
+.nfe-items tr:last-child td { border-bottom: none; }
+.nfe-bank-row { cursor: pointer; transition: background 0.2s; }
+.nfe-bank-row:hover { background: var(--line-soft); }
+.nfe-items th.num, .nfe-items td.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
+.nfe-empty { display: none; text-align: center; padding: 48px; color: var(--ink-soft); font-size: 14px; }
+
+/* Grid de Métricas do Dashboard */
+.nfe-tax-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+.nfe-tax-cell { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.nfe-tax-cell .l { font-size: 12px; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 6px; }
+.nfe-tax-cell .v { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: var(--ink); }
+
+/* Modal Corporativo Integrado */
+.nfe-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(22,36,31,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.nfe-modal-overlay.show { opacity: 1; pointer-events: auto; }
+.nfe-modal { background: var(--bg); border-radius: var(--radius); max-height: 90vh; overflow-y: auto; padding: 32px; box-shadow: 0 20px 40px rgba(22,36,31,0.15); display: flex; flex-direction: column; gap: 20px; }
+.nfe-modal-topbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+
+/* Timeline dos Logs de Auditoria */
+#modalAuditTimeline::-webkit-scrollbar { width: 6px; }
+#modalAuditTimeline::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+#modalAuditTimeline::-webkit-scrollbar-thumb:hover { background: var(--ink-soft); }
+
+/* Seletores Suspensos do Topo SaaS */
+#saasTenantSelect, #saasUserSelect {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  transition: background 0.2s;
+}
+#saasTenantSelect:focus, #saasUserSelect:focus {
+  box-shadow: 0 0 0 2px var(--accent);
+}/* --- Extensões para o Dashboard Gráfico --- */
+.nfe-dash-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.nfe-dash-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+@media(max-width: 900px) { .nfe-dash-row { grid-template-columns: 1fr; } }
+
+.nfe-chart-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(22,36,31,0.02);
+}
+.nfe-chart-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 16px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nfe-progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.nfe-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nfe-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.nfe-progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--line-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.nfe-progress-bar-fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.nfe-progress-bar-fill.accent { background: var(--accent); }
+.nfe-progress-bar-fill.steel { background: var(--steel); }
+.nfe-progress-bar-fill.danger { background: var(--danger); }
+
+/* Grid Compacto de Impostos e Descontos (estilo cartão de resumo) */
+.nfe-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+.nfe-summary-cell {
+  background: var(--paper);
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.nfe-summary-cell:nth-child(6n) { border-right: none; }
+.nfe-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.nfe-summary-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+}
+@media(max-width: 900px) {
+  .nfe-summary-grid { grid-template-columns: repeat(3, 1fr); }
+  .nfe-summary-cell:nth-child(6n) { border-right: 1px solid var(--line); }
+  .nfe-summary-cell:nth-child(3n) { border-right: none; }
+}
+@media(max-width: 560px) {
+  .nfe-summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .nfe-summary-cell:nth-child(3n) { border-right: 1px solid var(--line); }
+  .nfe-summary-cell:nth-child(2n) { border-right: none; }
+}
+
+/* --- Dashboard Executivo estilo Jira --- */
+.nfe-dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr 1fr;
+  grid-template-areas:
+    "vendas vendas  vendas"
+    "status chart   summary"
+    "risk   chart   supplier"
+    "geo    geo     geo";
+  gap: 20px;
+  align-items: stretch;
+}
+.nfe-dash-area-vendas { grid-area: vendas; }
+.nfe-dash-area-status { grid-area: status; }
+.nfe-dash-area-chart { grid-area: chart; }
+.nfe-dash-area-summary { grid-area: summary; }
+.nfe-dash-area-risk { grid-area: risk; }
+.nfe-dash-area-supplier { grid-area: supplier; }
+.nfe-dash-area-geo { grid-area: geo; }
+
+@media(max-width: 1100px) {
+  .nfe-dash-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "vendas"
+      "status"
+      "chart"
+      "summary"
+      "risk"
+      "supplier"
+      "geo";
+  }
+}
+
+.nfe-dash-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(22,36,31,0.02);
+  display: flex;
+  flex-direction: column;
+}
+.nfe-dash-card-head {
+  background: var(--brand);
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  padding: 12px 18px;
+}
+.nfe-dash-card-body {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Visão Geral por Status */
+.nfe-dash-total-label { font-size: 11px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+.nfe-dash-total-value { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; color: var(--brand-dark); }
+.nfe-dash-stat-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.nfe-dash-stat { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+.nfe-dash-stat-num { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; }
+.nfe-dash-pill { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.03em; }
+.nfe-dash-footnote { font-size: 12px; color: var(--ink-soft); margin-top: auto; }
+
+/* Resumo Executivo (pares chave/valor) */
+.nfe-dash-kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; color: var(--ink-soft); border-bottom: 1px dashed var(--line); padding-bottom: 10px; }
+.nfe-dash-kv b { color: var(--ink); font-family: 'JetBrains Mono', monospace; font-size: 14px; text-align: right; }
+
+/* Gauge / Donut (conic-gradient) */
+.nfe-dash-gauge-body { align-items: center; justify-content: center; text-align: center; }
+.nfe-gauge-outer {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+.nfe-gauge-inner {
+  width: 104px;
+  height: 104px;
+  background: var(--paper);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.nfe-gauge-value { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; color: var(--ink); }
+.nfe-gauge-sub { font-size: 10px; color: var(--ink-soft); text-transform: uppercase; font-weight: 700; letter-spacing: 0.03em; margin-top: 2px; }
+
+.nfe-dash-donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.nfe-dash-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 140px; }
+.nfe-dash-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+.nfe-dash-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.nfe-dash-legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nfe-dash-legend-pct { font-weight: 700; color: var(--ink); font-family: 'JetBrains Mono', monospace; }
+
+/* Gráfico de barras (Faturamento Mensal) */
+.nfe-bar-chart { display: flex; align-items: flex-end; gap: 16px; height: 220px; padding-top: 10px; }
+.nfe-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 8px; }
+.nfe-bar-value { font-size: 11px; font-weight: 700; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+.nfe-bar-track { width: 100%; max-width: 38px; flex: 1; display: flex; align-items: flex-end; background: var(--line-soft); border-radius: 6px 6px 0 0; overflow: hidden; }
+.nfe-bar-fill { width: 100%; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%); border-radius: 6px 6px 0 0; transition: height 0.4s ease; }
+.nfe-bar-label { font-size: 11px; color: var(--ink-soft); font-weight: 600; text-transform: capitalize; }
+
+/* Melhoria na Tabela de Filtros Avançados */
+.nfe-adv-filter-grid {
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+  gap: 12px; 
+  background: var(--paper); 
+  border: 1px solid var(--line); 
+  padding: 20px; 
+  border-radius: var(--radius); 
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(22,36,31,0.02);
+}
+.nfe-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nfe-filter-field label {
+  font-size: 11px; 
+  font-weight: 700; 
+  color: var(--ink-soft); 
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.nfe-filter-field input, .nfe-filter-field select {
+  width: 100%; 
+  padding: 10px; 
+  border: 1px solid var(--line); 
+  border-radius: 8px; 
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  background: #FFF;
+  color: var(--ink);
+  transition: border-color 0.2s;
+}
+.nfe-filter-field input:focus, .nfe-filter-field select:focus {
+  outline: none;
+  border-color: var(--brand);
+}

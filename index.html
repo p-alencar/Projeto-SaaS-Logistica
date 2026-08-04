@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leitor de NF-e - Portal SaaS Local</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="nfe-app">
+  
+  <div style="background: var(--brand-dark); color: white; padding: 10px 24px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); font-family: 'Inter', sans-serif;">
+    <div>🚀 <b>Ambiente SaaS Simulado Localmente</b></div>
+    <div style="display: flex; gap: 14px; align-items: center;">
+      <label>Empresa Ativa: 
+        <select id="saasTenantSelect" style="background:#fff; border:none; padding:4px 8px; border-radius:4px; font-weight:600; color:var(--ink);"></select>
+      </label>
+      <label>Funcionário / Nível: 
+        <select id="saasUserSelect" style="background:#fff; border:none; padding:4px 8px; border-radius:4px; font-weight:600; color:var(--ink);"></select>
+      </label>
+    </div>
+  </div>
+
+  <div class="nfe-shell">
+    <aside class="nfe-sidebar">
+      <div class="nfe-side-logo">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L20 8V20C20 21.1 19.1 22 18 22H6C4.9 22 4 21.1 4 20V4C4 2.9 4.9 2 6 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 2V8H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+      <button class="nfe-side-btn active" data-tab="import" title="Importação de Notas">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4L7 9M12 4L17 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Importar
+      </button>
+      <button class="nfe-side-btn" data-tab="bank" title="Banco de Notas">
+        <svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="5" rx="8" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M4 5V19C4 20.66 7.58 22 12 22C16.42 22 20 20.66 20 19V5" stroke="currentColor" stroke-width="1.8"/><path d="M4 12C4 13.66 7.58 15 12 15C16.42 15 20 13.66 20 12" stroke="currentColor" stroke-width="1.8"/></svg>
+        Notas
+      </button>
+      <button class="nfe-side-btn" data-tab="dashboard" title="Dashboard Financeiro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Dashboard
+      </button>
+      <button class="nfe-side-btn" data-tab="cadastro" title="Cadastro de Empresas e Funcionários">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V5a2 2 0 012-2h6a2 2 0 012 2v16M13 21V9a2 2 0 012-2h4a2 2 0 012 2v12M3 21h18M7 7h.01M7 11h.01M7 15h.01M11 7h.01M11 11h.01M11 15h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Cadastro
+      </button>
+    </aside>
+
+    <div class="nfe-main">
+      <section class="nfe-tab-panel active" id="tabImport">
+        <div class="nfe-hero">
+          <p class="nfe-eyebrow">Leitor de NF-e</p>
+          <h1 class="nfe-title">Solte o XML. Veja a nota, não o código.</h1>
+          <p class="nfe-sub">Importe o arquivo XML de qualquer Nota Fiscal Eletrônica — processamento local simulando persistência SaaS segmentada por tenant.</p>
+
+          <label class="nfe-drop" id="nfeDrop">
+            <div class="nfe-drop-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4L7 9M12 4L17 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="nfe-drop-text">Importar nota</div>
+            <div class="nfe-drop-sub">Clique para escolher ou arraste aqui o(s) arquivo(s) .xml</div>
+            <input type="file" id="nfeFile" accept=".xml,text/xml,application/xml">
+          </label>
+          <div class="nfe-error" id="nfeError"></div>
+
+          <div class="nfe-chave-consulta">
+            <div class="nfe-chave-consulta-head">
+              <span class="nfe-chave-consulta-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <div>
+                <div class="nfe-chave-consulta-title">Já tem a chave de acesso?</div>
+                <div class="nfe-chave-consulta-sub">Cole os 44 dígitos da chave para decodificar as informações nela contidas, localizar a nota no seu banco local ou consultar a situação oficial na SEFAZ.</div>
+              </div>
+            </div>
+            <div class="nfe-chave-consulta-row">
+              <input type="text" id="chaveConsultaInput" placeholder="Ex.: 3525 0714 2000 1099 0001 5500 1000 0001 0011 597" maxlength="53">
+              <button class="nfe-btn nfe-btn-primary" id="chaveConsultaBtn">Consultar chave</button>
+            </div>
+            <div class="nfe-chave-consulta-msg" id="chaveConsultaMsg"></div>
+          </div>
+        </div>
+
+        <div class="nfe-result" id="nfeResult">
+          <div class="nfe-toolbar">
+            <span class="nfe-status" id="nfeStatus"></span>
+            <div style="display:flex; gap:8px;">
+              <button class="nfe-btn nfe-btn-primary" id="nfeSaveBtn">Salvar nota na Nuvem</button>
+              <button class="nfe-btn" id="nfeExcelBtn">Exportar Excel</button>
+              <button class="nfe-btn" id="nfePdfBtn">Salvar em PDF</button>
+              <button class="nfe-btn" id="nfeNewBtn">Importar outra nota</button>
+            </div>
+          </div>
+          <div id="nfeDocMount"></div>
+        </div>
+      </section>
+
+      <section class="nfe-tab-panel" id="tabBank">
+        <div class="nfe-bank-wrap">
+          <div class="nfe-bank-header">
+            <h2 class="nfe-title">Todas as notas salvas</h2>
+            <p class="nfe-sub">Pesquise, filtre e gerencie as notas fiscais associadas estritamente à sua conta tenant.</p>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-bottom:16px; align-items:center;">
+            <div class="nfe-search-box" style="flex:1; margin-bottom:0;">
+              <input type="text" id="bankSearch" placeholder="Buscar por número, emitente, destinatário, CNPJ, chave...">
+            </div>
+            <button class="nfe-btn" id="bankExportExcel">Exportar Visão Excel</button>
+            <button class="nfe-btn" id="bankBulkZipBtn" style="background:#2C4A63; color:white; border-color:#2C4A63;">Exportar Fechamento Contábil (.ZIP)</button>
+          </div>
+
+          <div class="nfe-adv-filter-grid" id="bankAdvFilters">
+            <div class="nfe-filter-field">
+              <label for="filterEmitente">Emitente</label>
+              <select id="filterEmitente"><option value="">Todos</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterDestinatario">Destinatário</label>
+              <select id="filterDestinatario"><option value="">Todos</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterUf">UF</label>
+              <select id="filterUf"><option value="">Todos</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterMunicipio">Município</label>
+              <select id="filterMunicipio"><option value="">Todos</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterStatus">Status</label>
+              <select id="filterStatus"><option value="">Todos</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterDirecao">Direção</label>
+              <select id="filterDirecao"><option value="">Todas</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterNatureza">Natureza da Operação</label>
+              <select id="filterNatureza"><option value="">Todos</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterCfop">CFOP</label>
+              <select id="filterCfop"><option value="">Todos</option></select>
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterDateFrom">Emitido de</label>
+              <input type="date" id="filterDateFrom">
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterDateTo">Emitido até</label>
+              <input type="date" id="filterDateTo">
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterValMin">Valor mínimo</label>
+              <input type="number" id="filterValMin" placeholder="R$ 0,00" step="0.01" min="0">
+            </div>
+            <div class="nfe-filter-field">
+              <label for="filterValMax">Valor máximo</label>
+              <input type="number" id="filterValMax" placeholder="R$ 0,00" step="0.01" min="0">
+            </div>
+          </div>
+
+          <div class="nfe-bank-meta">
+            <span id="bankCount">0 notas encontradas</span>
+            <button class="nfe-btn" id="bankClearFilters">Limpar filtros</button>
+          </div>
+
+          <div class="nfe-table-scroll" id="bankTableWrap">
+            <table class="nfe-items">
+              <thead>
+                <tr>
+                  <th>Nota</th>
+                  <th>Emitente</th>
+                  <th>Destinatário</th>
+                  <th>Emissão</th>
+                  <th>Direção</th>
+                  <th class="num">Valor total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="bankTableBody"></tbody>
+            </table>
+          </div>
+          <div id="paginationWrap" style="display:flex; justify-content:center; gap:6px; margin-top:16px;"></div>
+        </div>
+      </section>
+
+      <section class="nfe-tab-panel" id="tabDashboard">
+        <div class="nfe-bank-wrap" id="dashboardMount"></div>
+      </section>
+
+      <section class="nfe-tab-panel" id="tabCadastro">
+        <div class="nfe-bank-wrap" id="cadastroMount"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="nfe-modal-overlay" id="nfeModalOverlay">
+    <div class="nfe-modal" style="max-width: 1100px; width: 95%;">
+      <div class="nfe-modal-topbar">
+        <span class="nfe-status" id="modalStatus"></span>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="nfe-btn" id="nfeModalPdfBtn" style="padding:6px 11px; font-size:12px;">PDF</button>
+          <button class="nfe-icon-btn" id="nfeModalClose">✕</button>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">
+        <div id="nfeModalDocMount"></div>
+        <div style="background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;">
+          <p class="nfe-section-label">📜 Histórico de Auditoria SaaS</p>
+          <div id="modalAuditTimeline" style="display: flex; flex-direction: column; gap: 10px; max-height: 450px; overflow-y: auto; font-family:'JetBrains Mono', monospace; font-size:12px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="nfe-modal-overlay" id="cadastroModalOverlay">
+    <div class="nfe-modal" style="max-width: 480px; width: 92%;">
+      <div class="nfe-modal-topbar">
+        <span class="nfe-status" id="cadastroModalTitle">Cadastro</span>
+        <button class="nfe-icon-btn" id="cadastroModalClose">✕</button>
+      </div>
+      <div id="cadastroModalBody"></div>
+    </div>
+  </div>
+</div>
+<script src="api.js"></script>
+<script src="parser.js"></script>
+<script src="ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
