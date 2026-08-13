@@ -15,7 +15,19 @@ const App = {
   },
 
   init() {
-    this.setupSaaSSelectors();
+    this.setupAuthScreen();
+
+    if (!ApiService.isAuthenticated()) {
+      this.showAuthScreen();
+      return;
+    }
+    this.boot();
+  },
+
+  // Inicializa a aplicação principal (chamado após login/registro bem-sucedido ou se já havia sessão salva)
+  boot() {
+    this.showApp();
+    this.setupTopbarUser();
     this.setupTabs();
     this.setupUpload();
     this.setupSearchAndFilters();
@@ -24,59 +36,195 @@ const App = {
     this.setupExcelExport();
     this.setupChaveConsulta();
     this.setupCadastroModal();
-    
+    this.setupClearDataButton();
+
     // Deixa disponível no escopo global para o clique dos badges inteligentes
     window.AppTriggerSmartFilter = (type, value) => this.handleSmartFilterToggle(type, value);
-
-    // Deixa disponível no escopo global para os botões de ação das linhas de Empresas/Funcionários
-    window.AppEditTenant = (id) => this.openTenantModal(id);
-    window.AppDeleteTenant = (id) => this.handleDeleteTenant(id);
-    window.AppEditUser = (id) => this.openUserModal(id);
-    window.AppDeleteUser = (id) => this.handleDeleteUser(id);
   },
 
-  setupSaaSSelectors() {
-    const tSel = document.getElementById('saasTenantSelect');
-    const uSel = document.getElementById('saasUserSelect');
-    if(!tSel || !uSel) return;
+  showAuthScreen() {
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('nfeAppRoot').style.display = 'none';
+  },
 
-    this.populateTenantSelect();
-    this.populateUserSelect();
+  showApp() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('nfeAppRoot').style.display = 'flex';
+  },
 
-    tSel.addEventListener('change', () => {
-      SAAS_CONFIG.activeTenant = tSel.value;
-      this.populateUserSelect();
+  // Preenche o nome do usuário logado na topbar e liga o botão de logout / minha conta
+  setupTopbarUser() {
+    const user = ApiService.getCurrentUser();
+    const nameEl = document.getElementById('topbarUserName');
+    if (nameEl && user) nameEl.innerText = user.name;
+
+    const logoutBtn = document.getElementById('btnLogout');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        ApiService.logout();
+        location.reload();
+      });
+    }
+
+    const accountBtn = document.getElementById('btnMyAccount');
+    if (accountBtn) accountBtn.addEventListener('click', () => this.openAccountModal());
+  },
+
+  // ============================================================
+  // Tela de Login / Registro
+  // ============================================================
+  setupAuthScreen() {
+    const loginPanel = document.getElementById('authLoginPanel');
+    const registerPanel = document.getElementById('authRegisterPanel');
+
+    document.getElementById('goToRegister').addEventListener('click', (e) => {
+      e.preventDefault();
+      loginPanel.style.display = 'none';
+      registerPanel.style.display = 'block';
+    });
+    document.getElementById('goToLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      registerPanel.style.display = 'none';
+      loginPanel.style.display = 'block';
+    });
+
+    document.getElementById('loginSubmit').addEventListener('click', () => {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorBox = document.getElementById('loginError');
+
+      const result = ApiService.login({ email, password });
+      if (!result.success) {
+        errorBox.classList.add('show');
+        errorBox.innerText = this.mapAuthError(result.reason);
+        return;
+      }
+      errorBox.classList.remove('show');
+      this.boot();
+    });
+
+    document.getElementById('registerSubmit').addEventListener('click', () => {
+      const name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const razaoSocial = document.getElementById('regRazaoSocial').value;
+      const cnpj = document.getElementById('regCnpj').value;
+      const errorBox = document.getElementById('registerError');
+
+      const result = ApiService.register({ name, email, password, razaoSocial, cnpj });
+      if (!result.success) {
+        errorBox.classList.add('show');
+        errorBox.innerText = this.mapAuthError(result.reason);
+        return;
+      }
+      errorBox.classList.remove('show');
+      this.boot();
+    });
+
+    // Enter também envia os formulários
+    ['loginEmail', 'loginPassword'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('loginSubmit').click();
+      });
+    });
+    ['regName', 'regEmail', 'regPassword', 'regRazaoSocial', 'regCnpj'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('registerSubmit').click();
+      });
+    });
+  },
+
+  mapAuthError(reason) {
+    const map = {
+      nome_obrigatorio: 'O nome é obrigatório.',
+      email_invalido: 'Informe um e-mail válido.',
+      senha_curta: 'A senha deve ter ao menos 4 caracteres.',
+      email_duplicado: 'Já existe uma conta com este e-mail.',
+      credenciais_invalidas: 'E-mail ou senha incorretos.',
+      senha_atual_incorreta: 'A senha atual informada está incorreta.',
+      sem_sessao: 'Sua sessão expirou. Faça login novamente.'
+    };
+    return map[reason] || 'Não foi possível concluir a operação.';
+  },
+
+  // Modal "Minha Conta" — editar nome/razão social/CNPJ e trocar senha
+  openAccountModal() {
+    const user = ApiService.getCurrentUser();
+    if (!user) return;
+
+    document.getElementById('cadastroModalTitle').innerText = 'Minha Conta';
+    document.getElementById('cadastroModalBody').innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:14px; padding: 8px 4px 4px;">
+        <div class="nfe-filter-field">
+          <label>Nome</label>
+          <input type="text" id="accName" value="${user.name}">
+        </div>
+        <div class="nfe-filter-field">
+          <label>E-mail</label>
+          <input type="text" value="${user.email}" disabled>
+        </div>
+        <div class="nfe-filter-field">
+          <label>Razão Social</label>
+          <input type="text" id="accRazaoSocial" value="${user.razaoSocial || ''}" placeholder="Nome da sua empresa">
+        </div>
+        <div class="nfe-filter-field">
+          <label>CNPJ</label>
+          <input type="text" id="accCnpj" value="${user.cnpj || ''}" placeholder="00.000.000/0000-00">
+        </div>
+        <div class="nfe-error" id="accError" style="margin-top:0;"></div>
+        <button class="nfe-btn nfe-btn-primary" id="accSubmit">Salvar Alterações</button>
+
+        <hr style="border:none; border-top:1px solid var(--line); margin:6px 0;">
+
+        <p style="font-size:13px; font-weight:600; color:var(--ink); margin:0;">Alterar senha</p>
+        <div class="nfe-filter-field">
+          <label>Senha atual</label>
+          <input type="password" id="accCurrentPassword">
+        </div>
+        <div class="nfe-filter-field">
+          <label>Nova senha</label>
+          <input type="password" id="accNewPassword" placeholder="Mínimo 4 caracteres">
+        </div>
+        <div class="nfe-error" id="accPasswordError" style="margin-top:0;"></div>
+        <button class="nfe-btn" id="accPasswordSubmit">Alterar Senha</button>
+      </div>
+    `;
+
+    document.getElementById('accSubmit').addEventListener('click', () => {
+      const name = document.getElementById('accName').value;
+      const razaoSocial = document.getElementById('accRazaoSocial').value;
+      const cnpj = document.getElementById('accCnpj').value;
+      const errorBox = document.getElementById('accError');
+
+      const result = ApiService.updateProfile({ name, razaoSocial, cnpj });
+      if (!result.success) {
+        errorBox.classList.add('show');
+        errorBox.innerText = this.mapAuthError(result.reason);
+        return;
+      }
+      document.getElementById('topbarUserName').innerText = result.user.name;
+      document.getElementById('cadastroModalOverlay').classList.remove('show');
       this.refreshCurrentView();
     });
-    uSel.addEventListener('change', () => { SAAS_CONFIG.activeUser = uSel.value; this.refreshCurrentView(); });
-  },
 
-  // Repopula o select de Empresa Ativa a partir do ApiService (usado no boot e após CRUD de cadastro)
-  populateTenantSelect() {
-    const tSel = document.getElementById('saasTenantSelect');
-    if (!tSel) return;
-    tSel.innerHTML = ApiService.getTenants().map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-    tSel.value = SAAS_CONFIG.activeTenant;
-  },
+    document.getElementById('accPasswordSubmit').addEventListener('click', () => {
+      const currentPassword = document.getElementById('accCurrentPassword').value;
+      const newPassword = document.getElementById('accNewPassword').value;
+      const errorBox = document.getElementById('accPasswordError');
 
-  // Repopula o select de Funcionário a partir da empresa selecionada (usado no boot e após CRUD de cadastro)
-  populateUserSelect() {
-    const uSel = document.getElementById('saasUserSelect');
-    const tSel = document.getElementById('saasTenantSelect');
-    if (!uSel || !tSel) return;
-    const tenantId = tSel.value || SAAS_CONFIG.activeTenant;
-    uSel.innerHTML = ApiService.getUsersByTenant(tenantId).map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-    SAAS_CONFIG.activeTenant = tenantId;
-    uSel.value = SAAS_CONFIG.activeUser && ApiService.getUsersByTenant(tenantId).some(u => u.id === SAAS_CONFIG.activeUser)
-      ? SAAS_CONFIG.activeUser
-      : uSel.value;
-    SAAS_CONFIG.activeUser = uSel.value;
-  },
+      const result = ApiService.changePassword({ currentPassword, newPassword });
+      if (!result.success) {
+        errorBox.classList.add('show');
+        errorBox.innerText = this.mapAuthError(result.reason);
+        return;
+      }
+      errorBox.classList.remove('show');
+      alert('Senha alterada com sucesso.');
+      document.getElementById('accCurrentPassword').value = '';
+      document.getElementById('accNewPassword').value = '';
+    });
 
-  // Chamado após qualquer alteração de cadastro (empresa/funcionário criado, editado ou removido)
-  refreshSaaSSelectors() {
-    this.populateTenantSelect();
-    this.populateUserSelect();
+    document.getElementById('cadastroModalOverlay').classList.add('show');
   },
 
   setupTabs() {
@@ -97,10 +245,6 @@ const App = {
         if (this.activeTab === 'dashboard') {
           document.getElementById('tabDashboard').classList.add('active');
           this.refreshCurrentView();
-        }
-        if (this.activeTab === 'cadastro') {
-          document.getElementById('tabCadastro').classList.add('active');
-          this.loadCadastro();
         }
       });
     });
@@ -123,10 +267,10 @@ const App = {
 
     document.getElementById('nfeSaveBtn').addEventListener('click', () => {
       if(this.currentLoadedNote) {
-        const result = ApiService.saveNoteToTenant(this.currentLoadedNote);
+        const result = ApiService.saveNote(this.currentLoadedNote);
 
         if (!result.success && result.reason === 'duplicate') {
-          alert("Esta nota já está arquivada no banco desta empresa (mesma chave de acesso). Importação bloqueada para evitar duplicidade.");
+          alert("Esta nota já está arquivada no seu banco de notas (mesma chave de acesso). Importação bloqueada para evitar duplicidade.");
           return;
         }
 
@@ -155,10 +299,10 @@ const App = {
 
   // Processamento cruzado da Tabela Excel com os Filtros Avançados
   loadBank() {
-    const rawNotes = ApiService.getTenantNotes();
+    const rawNotes = ApiService.getUserNotes();
     const search = document.getElementById('bankSearch').value.toLowerCase();
 
-    // Popula/atualiza as opções dos selects com base no que existe no tenant ativo
+    // Popula/atualiza as opções dos selects com base no que existe na conta ativa
     this.populateFilterOptions(rawNotes);
 
     const f = this.smartFilters;
@@ -330,9 +474,9 @@ const App = {
     if(!btn) return;
 
     btn.addEventListener('click', () => {
-      const rawNotes = ApiService.getTenantNotes();
+      const rawNotes = ApiService.getUserNotes();
       if(rawNotes.length === 0) {
-        alert("Não há dados cadastrados neste tenant para exportar!");
+        alert("Não há notas cadastradas na sua conta para exportar!");
         return;
       }
 
@@ -358,11 +502,12 @@ const App = {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Fechamento Fiscal");
       
       // Realiza o download imediato da planilha estruturada
-      XLSX.writeFile(workbook, `Fechamento_Fiscal_Tenant_${SAAS_CONFIG.activeTenant}.xlsx`);
+      const user = ApiService.getCurrentUser();
+      XLSX.writeFile(workbook, `Fechamento_Fiscal_${(user && user.name || 'conta').replace(/\s+/g, '_')}.xlsx`);
     });
   },
 
-  // [Chave de Acesso] Cola/digita os 44 dígitos, formata em blocos de 4 e localiza a nota no banco local do tenant
+  // [Chave de Acesso] Cola/digita os 44 dígitos, formata em blocos de 4 e localiza a nota no banco local da conta
   setupChaveConsulta() {
     const input = document.getElementById('chaveConsultaInput');
     const btn = document.getElementById('chaveConsultaBtn');
@@ -388,14 +533,14 @@ const App = {
         return;
       }
 
-      const notes = ApiService.getTenantNotes();
+      const notes = ApiService.getUserNotes();
       const found = notes.find(n => (n.chave || '').replace(/\D/g, '') === digits);
 
       if (found) {
         showMsg(`Nota Nº ${found.numero} localizada no banco local. Abrindo detalhes...`, 'success');
         this.handleRowClick(found);
       } else {
-        showMsg('Nota não encontrada no banco local desta empresa. Verifique a chave ou consulte diretamente na SEFAZ.', 'error');
+        showMsg('Nota não encontrada no seu banco local. Verifique a chave ou consulte diretamente na SEFAZ.', 'error');
       }
     };
 
@@ -413,12 +558,11 @@ const App = {
   refreshCurrentView() {
     if (this.activeTab === 'bank') this.loadBank();
     if (this.activeTab === 'dashboard') this.loadDashboard();
-    if (this.activeTab === 'cadastro') this.loadCadastro();
   },
 
-  // Consolida os indicadores executivos do tenant ativo para o Dashboard estilo diretoria
+  // Consolida os indicadores executivos da conta ativa para o Dashboard estilo diretoria
   loadDashboard() {
-    const notes = ApiService.getTenantNotes();
+    const notes = ApiService.getUserNotes();
     const metrics = ApiService.getMetrics();
 
     // 1) Distribuição por status de triagem (aprovada / em análise / crítica)
@@ -479,28 +623,6 @@ const App = {
     });
   },
 
-  // ============================================================
-  // [REQUISITO: Cadastro de Empresas e Funcionários]
-  // ============================================================
-
-  loadCadastro() {
-    const session = ApiService.getSession();
-    const tenants = ApiService.getTenants();
-    const users = ApiService.getUsers();
-    const systemLogs = ApiService.getSystemLogs();
-
-    NfeUI.renderCadastro({ session, tenants, users, systemLogs });
-    this.setupCadastroButtons();
-  },
-
-  setupCadastroButtons() {
-    const btnNewTenant = document.getElementById('btnNewTenant');
-    if (btnNewTenant) btnNewTenant.addEventListener('click', () => this.openTenantModal(null));
-
-    const btnNewUser = document.getElementById('btnNewUser');
-    if (btnNewUser) btnNewUser.addEventListener('click', () => this.openUserModal(null));
-  },
-
   setupCadastroModal() {
     const overlay = document.getElementById('cadastroModalOverlay');
     const closeBtn = document.getElementById('cadastroModalClose');
@@ -508,152 +630,74 @@ const App = {
     closeBtn.addEventListener('click', () => overlay.classList.remove('show'));
   },
 
-  // Abre o formulário de criação/edição de Empresa
-  openTenantModal(tenantId) {
-    const isEdit = !!tenantId;
-    const tenant = isEdit ? ApiService.getTenants().find(t => t.id === tenantId) : null;
+  // Engrenagem no topo: abre a zona de risco para limpar as bases locais (localStorage)
+  setupClearDataButton() {
+    const btn = document.getElementById('btnClearData');
+    if (btn) btn.addEventListener('click', () => this.openClearDataModal());
+  },
 
-    document.getElementById('cadastroModalTitle').innerText = isEdit ? 'Editar Empresa' : 'Nova Empresa';
+  openClearDataModal() {
+    document.getElementById('cadastroModalTitle').innerText = '⚠️ Limpar Base de Dados';
     document.getElementById('cadastroModalBody').innerHTML = `
       <div style="display:flex; flex-direction:column; gap:14px; padding: 8px 4px 4px;">
+        <p style="font-size:13px; color:var(--ink-soft); line-height:1.5; margin:0;">
+          Esta ação apaga permanentemente os dados selecionados no armazenamento local do navegador. Não é possível desfazer.
+        </p>
+
+        <label style="display:flex; gap:8px; align-items:flex-start; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="clearNotes" checked style="margin-top:3px;">
+          <span><b>Notas fiscais</b> — todo o seu banco de notas importadas</span>
+        </label>
+        <label style="display:flex; gap:8px; align-items:flex-start; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="clearLogs" checked style="margin-top:3px;">
+          <span><b>Logs de auditoria</b> — histórico geral de ações do sistema</span>
+        </label>
+        <label style="display:flex; gap:8px; align-items:flex-start; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="clearAllAccounts" style="margin-top:3px;">
+          <span><b>Todas as contas cadastradas</b> — apaga também os logins de todos os usuários e encerra sua sessão</span>
+        </label>
+
         <div class="nfe-filter-field">
-          <label>Nome da Empresa</label>
-          <input type="text" id="formTenantName" placeholder="Ex.: Tech Solutions Brasil Ltda" value="${tenant ? tenant.name : ''}">
+          <label>Para confirmar, digite <b>LIMPAR</b> abaixo</label>
+          <input type="text" id="clearConfirmInput" placeholder="LIMPAR" autocomplete="off">
         </div>
-        <div class="nfe-filter-field">
-          <label>CNPJ (opcional)</label>
-          <input type="text" id="formTenantCnpj" placeholder="00.000.000/0000-00" value="${tenant ? (tenant.cnpj || '') : ''}">
-        </div>
-        <div class="nfe-error" id="formTenantError" style="margin-top:0;"></div>
-        <button class="nfe-btn nfe-btn-primary" id="formTenantSubmit">${isEdit ? 'Salvar Alterações' : 'Cadastrar Empresa'}</button>
+
+        <div class="nfe-error" id="clearDataError"></div>
+
+        <button class="nfe-btn" id="clearDataSubmit" style="background:var(--danger); color:white; border-color:var(--danger); opacity:0.5; pointer-events:none; transition:opacity 0.15s;">
+          Apagar dados selecionados
+        </button>
       </div>
     `;
 
-    document.getElementById('formTenantSubmit').addEventListener('click', () => {
-      const name = document.getElementById('formTenantName').value;
-      const cnpj = document.getElementById('formTenantCnpj').value;
-      const errorBox = document.getElementById('formTenantError');
+    const submitBtn = document.getElementById('clearDataSubmit');
+    const confirmInput = document.getElementById('clearConfirmInput');
 
-      const result = isEdit
-        ? ApiService.updateTenant(tenantId, { name, cnpj })
-        : ApiService.createTenant({ name, cnpj });
+    confirmInput.addEventListener('input', () => {
+      const active = confirmInput.value.trim().toUpperCase() === 'LIMPAR';
+      submitBtn.style.opacity = active ? '1' : '0.5';
+      submitBtn.style.pointerEvents = active ? 'auto' : 'none';
+    });
 
-      if (!result.success) {
+    submitBtn.addEventListener('click', () => {
+      const notes = document.getElementById('clearNotes').checked;
+      const logs = document.getElementById('clearLogs').checked;
+      const allAccounts = document.getElementById('clearAllAccounts').checked;
+      const errorBox = document.getElementById('clearDataError');
+
+      if (!notes && !logs && !allAccounts) {
         errorBox.classList.add('show');
-        errorBox.innerText = this.mapCadastroError(result.reason);
+        errorBox.innerText = 'Selecione ao menos um tipo de dado para limpar.';
         return;
       }
 
+      ApiService.clearAllData({ notes, logs, allAccounts });
       document.getElementById('cadastroModalOverlay').classList.remove('show');
-      this.refreshSaaSSelectors();
-      this.loadCadastro();
+      // Recarrega para reinicializar o app (volta para a tela de login se as contas foram apagadas)
+      location.reload();
     });
 
     document.getElementById('cadastroModalOverlay').classList.add('show');
-  },
-
-  // Abre o formulário de criação/edição de Funcionário
-  openUserModal(userId) {
-    const isEdit = !!userId;
-    const user = isEdit ? ApiService.getUsers().find(u => u.id === userId) : null;
-    const tenants = ApiService.getTenants();
-    const defaultTenantId = user ? user.tenantId : SAAS_CONFIG.activeTenant;
-
-    document.getElementById('cadastroModalTitle').innerText = isEdit ? 'Editar Funcionário' : 'Novo Funcionário';
-    document.getElementById('cadastroModalBody').innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:14px; padding: 8px 4px 4px;">
-        <div class="nfe-filter-field">
-          <label>Nome do Funcionário</label>
-          <input type="text" id="formUserName" placeholder="Ex.: Ana Souza" value="${user ? user.name : ''}">
-        </div>
-        <div class="nfe-filter-field">
-          <label>Empresa</label>
-          <select id="formUserTenant" ${isEdit ? 'disabled' : ''}>
-            ${tenants.map(t => `<option value="${t.id}" ${defaultTenantId === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
-          </select>
-        </div>
-        <div class="nfe-filter-field">
-          <label>Papel</label>
-          <select id="formUserRole">
-            <option value="admin" ${user && user.role === 'admin' ? 'selected' : ''}>Administrador</option>
-            <option value="operador" ${user && user.role === 'operador' ? 'selected' : ''}>Operador</option>
-            <option value="leitura" ${!user || user.role === 'leitura' ? 'selected' : ''}>Leitura</option>
-          </select>
-        </div>
-        <div class="nfe-error" id="formUserError" style="margin-top:0;"></div>
-        <button class="nfe-btn nfe-btn-primary" id="formUserSubmit">${isEdit ? 'Salvar Alterações' : 'Cadastrar Funcionário'}</button>
-      </div>
-    `;
-
-    document.getElementById('formUserSubmit').addEventListener('click', () => {
-      const name = document.getElementById('formUserName').value;
-      const role = document.getElementById('formUserRole').value;
-      const tenantId = document.getElementById('formUserTenant').value;
-      const errorBox = document.getElementById('formUserError');
-
-      const result = isEdit
-        ? ApiService.updateUser(userId, { name, role })
-        : ApiService.createUser({ tenantId, name, role });
-
-      if (!result.success) {
-        errorBox.classList.add('show');
-        errorBox.innerText = this.mapCadastroError(result.reason);
-        return;
-      }
-
-      document.getElementById('cadastroModalOverlay').classList.remove('show');
-      this.refreshSaaSSelectors();
-      this.loadCadastro();
-    });
-
-    document.getElementById('cadastroModalOverlay').classList.add('show');
-  },
-
-  handleDeleteTenant(id) {
-    const tenant = ApiService.getTenants().find(t => t.id === id);
-    if (!tenant) return;
-    if (!confirm(`Remover a empresa "${tenant.name}"? Isso também removerá seus funcionários cadastrados.`)) return;
-
-    const result = ApiService.deleteTenant(id);
-    if (!result.success) {
-      alert(this.mapCadastroError(result.reason));
-      return;
-    }
-
-    this.refreshSaaSSelectors();
-    this.loadCadastro();
-    this.refreshCurrentView();
-  },
-
-  handleDeleteUser(id) {
-    const user = ApiService.getUsers().find(u => u.id === id);
-    if (!user) return;
-    if (!confirm(`Remover o funcionário "${user.name}"?`)) return;
-
-    const result = ApiService.deleteUser(id);
-    if (!result.success) {
-      alert(this.mapCadastroError(result.reason));
-      return;
-    }
-
-    this.refreshSaaSSelectors();
-    this.loadCadastro();
-  },
-
-  // Traduz os motivos de erro retornados pelo ApiService em mensagens amigáveis
-  mapCadastroError(reason) {
-    const map = {
-      nome_obrigatorio: 'O nome é obrigatório.',
-      cnpj_duplicado: 'Já existe uma empresa cadastrada com este CNPJ.',
-      empresa_invalida: 'Selecione uma empresa válida.',
-      papel_invalido: 'Selecione um papel válido.',
-      nao_encontrada: 'Empresa não encontrada.',
-      nao_encontrado: 'Funcionário não encontrado.',
-      ultima_empresa: 'Não é possível remover a última empresa cadastrada no ambiente.',
-      ultimo_funcionario: 'Não é possível remover o último funcionário desta empresa.',
-      possui_notas: 'Esta empresa possui notas fiscais arquivadas e não pode ser removida.'
-    };
-    return map[reason] || 'Não foi possível concluir a operação.';
   }
 };
 

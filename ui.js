@@ -197,7 +197,7 @@ const NfeUI = {
     const map = {
       saida: 'Nota classificada como <b>Venda</b> (Saída, tpNF=1) — será somada como receita no Dashboard.',
       entrada: 'Nota classificada como <b>Despesa</b> (Entrada, tpNF=0) — será somada como custo no Dashboard.',
-      indefinida: 'Não foi possível identificar a direção desta nota pelo código tpNF nem pelo CNPJ. Cadastre o <b>CNPJ da empresa</b> em Cadastro → Editar Empresa para habilitar a identificação por CNPJ como reserva.'
+      indefinida: 'Não foi possível identificar a direção desta nota pelo código tpNF nem pelo CNPJ. Cadastre o <b>CNPJ da sua empresa</b> em "Minha Conta" para habilitar a identificação por CNPJ como reserva.'
     };
     return map[direction] || map.indefinida;
   },
@@ -287,7 +287,7 @@ const NfeUI = {
           <span class="nfe-dash-pill" style="background:#FBEEEA; color:var(--danger);">CRÍTICA</span>
         </div>
       </div>
-      <div class="nfe-dash-footnote">${metrics.count} notas fiscais no total desta empresa</div>
+      <div class="nfe-dash-footnote">${metrics.count} notas fiscais no total desta conta</div>
     `;
 
     // --- Card: Faturamento Mensal (gráfico de barras) ---
@@ -330,7 +330,7 @@ const NfeUI = {
     dashMount.innerHTML = `
       <div class="nfe-bank-header">
         <h2 class="nfe-title">Dashboard Executivo</h2>
-        <p class="nfe-sub">Indicadores consolidados para apoiar a tomada de decisão da diretoria — dados do tenant ativo.</p>
+        <p class="nfe-sub">Indicadores consolidados para apoiar a tomada de decisão da diretoria — dados da sua conta.</p>
       </div>
 
       <div class="nfe-dash-grid">
@@ -425,113 +425,4 @@ const NfeUI = {
     `;
   },
 
-  // Renderiza a tela de Cadastro de Empresas e Funcionários (restrita a Administradores)
-  renderCadastro(data) {
-    const { session, tenants, users, systemLogs } = data;
-    const mount = document.getElementById('cadastroMount');
-    const isAdmin = session.user && session.user.role === 'admin';
-
-    if (!isAdmin) {
-      mount.innerHTML = `
-        <div class="nfe-bank-header">
-          <h2 class="nfe-title">Cadastro de Empresas e Funcionários</h2>
-          <p class="nfe-sub">Gerencie as empresas (tenants) e os funcionários com acesso a este ambiente SaaS simulado.</p>
-        </div>
-        <div class="nfe-error show">🔒 Acesso restrito: apenas usuários com papel <b>Administrador</b> podem gerenciar empresas e funcionários. Troque para um usuário administrador no seletor no topo da página.</div>
-      `;
-      return;
-    }
-
-    const formatCnpj = (raw) => {
-      const clean = (raw || '').replace(/\D/g, '');
-      if (clean.length !== 14) return raw ? raw : '—';
-      return clean.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    };
-
-    const roleBadge = (role) => {
-      const styleMap = {
-        admin: 'background:#EAF6EF; color:var(--brand-dark);',
-        operador: 'background:#FCF4E7; color:#8F6B1B;',
-        leitura: 'background:var(--line-soft); color:var(--ink-soft);'
-      };
-      const labelMap = { admin: 'Administrador', operador: 'Operador', leitura: 'Leitura' };
-      return `<span class="nfe-status" style="${styleMap[role] || ''}"><span class="nfe-status-dot"></span>${labelMap[role] || role}</span>`;
-    };
-
-    const tenantRows = tenants.map(t => {
-      const qty = users.filter(u => u.tenantId === t.id).length;
-      return `
-        <tr>
-          <td><b>${t.name}</b></td>
-          <td style="font-family:'JetBrains Mono', monospace; font-size:12px;">${formatCnpj(t.cnpj)}</td>
-          <td>${qty} funcionário${qty === 1 ? '' : 's'}</td>
-          <td>
-            <div style="display:flex; gap:8px;">
-              <button class="nfe-btn" style="padding:6px 12px; font-size:12px;" onclick="window.AppEditTenant('${t.id}')">Editar</button>
-              <button class="nfe-btn" style="padding:6px 12px; font-size:12px; color:var(--danger); border-color:var(--danger);" onclick="window.AppDeleteTenant('${t.id}')">Remover</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    const userRows = users.map(u => {
-      const tenant = tenants.find(t => t.id === u.tenantId);
-      return `
-        <tr>
-          <td><b>${u.name}</b></td>
-          <td>${tenant ? tenant.name : '—'}</td>
-          <td>${roleBadge(u.role)}</td>
-          <td>
-            <div style="display:flex; gap:8px;">
-              <button class="nfe-btn" style="padding:6px 12px; font-size:12px;" onclick="window.AppEditUser('${u.id}')">Editar</button>
-              <button class="nfe-btn" style="padding:6px 12px; font-size:12px; color:var(--danger); border-color:var(--danger);" onclick="window.AppDeleteUser('${u.id}')">Remover</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    const logsHtml = systemLogs.length ? systemLogs.map(l => `
-      <div>
-        <span style="color:var(--ink-soft);">[${l.time}]</span> <b>${l.user}</b> — ${l.action}: ${l.details}
-      </div>
-    `).join('') : '<div style="color:var(--ink-soft);">Nenhuma alteração registrada ainda.</div>';
-
-    mount.innerHTML = `
-      <div class="nfe-bank-header">
-        <h2 class="nfe-title">Cadastro de Empresas e Funcionários</h2>
-        <p class="nfe-sub">Gerencie as empresas (tenants) e os funcionários com acesso a este ambiente SaaS simulado.</p>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; margin: 8px 0 16px;">
-        <h3 style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:17px; color:var(--ink);">🏢 Empresas cadastradas</h3>
-        <button class="nfe-btn nfe-btn-primary" id="btnNewTenant">+ Nova empresa</button>
-      </div>
-      <div class="nfe-table-scroll">
-        <table class="nfe-items">
-          <thead><tr><th>Empresa</th><th>CNPJ</th><th>Funcionários</th><th>Ações</th></tr></thead>
-          <tbody>${tenantRows}</tbody>
-        </table>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; margin: 32px 0 16px;">
-        <h3 style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:17px; color:var(--ink);">👤 Funcionários cadastrados</h3>
-        <button class="nfe-btn nfe-btn-primary" id="btnNewUser">+ Novo funcionário</button>
-      </div>
-      <div class="nfe-table-scroll">
-        <table class="nfe-items">
-          <thead><tr><th>Funcionário</th><th>Empresa</th><th>Papel</th><th>Ações</th></tr></thead>
-          <tbody>${userRows}</tbody>
-        </table>
-      </div>
-
-      <div style="margin-top:32px;">
-        <p class="nfe-section-label">📜 Log de Auditoria do Cadastro</p>
-        <div style="max-height:220px; overflow-y:auto; font-family:'JetBrains Mono', monospace; font-size:12px; display:flex; flex-direction:column; gap:8px; background:var(--line-soft); padding:16px; border-radius:10px;">
-          ${logsHtml}
-        </div>
-      </div>
-    `;
-  }
 };

@@ -3,24 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leitor de NF-e - Portal SaaS Local</title>
+  <title>Leitor de NF-e</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="nfe-app">
-  
+
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L20 8V20C20 21.1 19.1 22 18 22H6C4.9 22 4 21.1 4 20V4C4 2.9 4.9 2 6 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 2V8H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <span>Leitor de NF-e</span>
+    </div>
+
+    <div id="authLoginPanel">
+      <p class="auth-eyebrow">Bem-vindo de volta</p>
+      <h1 class="auth-title">Entrar na sua conta</h1>
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" placeholder="voce@empresa.com" autocomplete="username">
+      </div>
+      <div class="auth-field">
+        <label>Senha</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="nfe-error" id="loginError"></div>
+      <button class="nfe-btn nfe-btn-primary auth-submit" id="loginSubmit">Entrar</button>
+      <p class="auth-switch">Ainda não tem conta? <a href="#" id="goToRegister">Criar conta</a></p>
+    </div>
+
+    <div id="authRegisterPanel" style="display:none;">
+      <p class="auth-eyebrow">Comece agora</p>
+      <h1 class="auth-title">Criar sua conta</h1>
+      <div class="auth-field">
+        <label>Nome completo</label>
+        <input type="text" id="regName" placeholder="Ex.: Ana Souza">
+      </div>
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="regEmail" placeholder="voce@empresa.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Senha</label>
+        <input type="password" id="regPassword" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label>Razão Social (opcional)</label>
+        <input type="text" id="regRazaoSocial" placeholder="Nome da sua empresa">
+      </div>
+      <div class="auth-field">
+        <label>CNPJ (opcional)</label>
+        <input type="text" id="regCnpj" placeholder="00.000.000/0000-00">
+      </div>
+      <div class="nfe-error" id="registerError"></div>
+      <button class="nfe-btn nfe-btn-primary auth-submit" id="registerSubmit">Criar conta</button>
+      <p class="auth-switch">Já tem conta? <a href="#" id="goToLogin">Entrar</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="nfe-app" id="nfeAppRoot" style="display:none;">
+
   <div style="background: var(--brand-dark); color: white; padding: 10px 24px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); font-family: 'Inter', sans-serif;">
-    <div>🚀 <b>Ambiente SaaS Simulado Localmente</b></div>
+    <div>🚀 <b>Leitor de NF-e</b></div>
     <div style="display: flex; gap: 14px; align-items: center;">
-      <label>Empresa Ativa: 
-        <select id="saasTenantSelect" style="background:#fff; border:none; padding:4px 8px; border-radius:4px; font-weight:600; color:var(--ink);"></select>
-      </label>
-      <label>Funcionário / Nível: 
-        <select id="saasUserSelect" style="background:#fff; border:none; padding:4px 8px; border-radius:4px; font-weight:600; color:var(--ink);"></select>
-      </label>
+      <button id="btnMyAccount" class="saas-gear-btn" style="width:auto; padding:6px 12px; gap:6px; font-weight:600;" title="Minha conta">
+        <span id="topbarUserName">Minha conta</span>
+      </button>
+      <button id="btnClearData" class="saas-gear-btn" title="Limpar bases de dados">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="btnLogout" class="saas-gear-btn" style="width:auto; padding:6px 12px;" title="Sair da conta">Sair</button>
     </div>
   </div>
 
@@ -41,10 +96,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Dashboard
       </button>
-      <button class="nfe-side-btn" data-tab="cadastro" title="Cadastro de Empresas e Funcionários">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V5a2 2 0 012-2h6a2 2 0 012 2v16M13 21V9a2 2 0 012-2h4a2 2 0 012 2v12M3 21h18M7 7h.01M7 11h.01M7 15h.01M11 7h.01M11 11h.01M11 15h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Cadastro
-      </button>
     </aside>
 
     <div class="nfe-main">
@@ -52,7 +103,7 @@
         <div class="nfe-hero">
           <p class="nfe-eyebrow">Leitor de NF-e</p>
           <h1 class="nfe-title">Solte o XML. Veja a nota, não o código.</h1>
-          <p class="nfe-sub">Importe o arquivo XML de qualquer Nota Fiscal Eletrônica — processamento local simulando persistência SaaS segmentada por tenant.</p>
+          <p class="nfe-sub">Importe o arquivo XML de qualquer Nota Fiscal Eletrônica — processamento local com persistência isolada por conta.</p>
 
           <label class="nfe-drop" id="nfeDrop">
             <div class="nfe-drop-icon">
@@ -100,7 +151,7 @@
         <div class="nfe-bank-wrap">
           <div class="nfe-bank-header">
             <h2 class="nfe-title">Todas as notas salvas</h2>
-            <p class="nfe-sub">Pesquise, filtre e gerencie as notas fiscais associadas estritamente à sua conta tenant.</p>
+            <p class="nfe-sub">Pesquise, filtre e gerencie as notas fiscais associadas estritamente à sua conta.</p>
           </div>
 
           <div style="display:flex; gap:12px; margin-bottom:16px; align-items:center;">
@@ -190,10 +241,6 @@
       <section class="nfe-tab-panel" id="tabDashboard">
         <div class="nfe-bank-wrap" id="dashboardMount"></div>
       </section>
-
-      <section class="nfe-tab-panel" id="tabCadastro">
-        <div class="nfe-bank-wrap" id="cadastroMount"></div>
-      </section>
     </div>
   </div>
 
@@ -209,7 +256,7 @@
       <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">
         <div id="nfeModalDocMount"></div>
         <div style="background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;">
-          <p class="nfe-section-label">📜 Histórico de Auditoria SaaS</p>
+          <p class="nfe-section-label">📜 Histórico de Auditoria</p>
           <div id="modalAuditTimeline" style="display: flex; flex-direction: column; gap: 10px; max-height: 450px; overflow-y: auto; font-family:'JetBrains Mono', monospace; font-size:12px;"></div>
         </div>
       </div>
