@@ -1,6 +1,8 @@
-/**
+﻿/**
  * js/api.js - Autenticação Local (Login / Registro) e Banco de Dados por Conta
  */
+import { supabase } from './src/lib/supabase.js'
+
 const AUTH_CONFIG = {
   users: [],
   activeUserId: null,
@@ -53,6 +55,55 @@ const ApiService = {
     }
   },
 
+  // Synchroniza o usuário ativo a partir de um objeto Supabase `user`
+  setActiveUserFromSupabase(user) {
+    if (!user) return null;
+    const id = user.id;
+    const meta = user.user_metadata || {};
+    const local = {
+      id,
+      name: meta.nome || meta.name || (user.email || '').split('@')[0],
+      email: user.email,
+      razaoSocial: meta.razao_social || '',
+      cnpj: meta.cnpj || '',
+      createdAt: new Date().toLocaleString('pt-BR')
+    };
+
+    const idx = AUTH_CONFIG.users.findIndex(u => u.id === id);
+    if (idx >= 0) AUTH_CONFIG.users[idx] = local; else AUTH_CONFIG.users.push(local);
+    AUTH_CONFIG.activeUserId = id;
+    this.persistUsers();
+    this.persistSession();
+    this.addSystemLog('Login Supabase', `${local.name} (${local.email})`);
+    return local;
+  },
+
+  async initSessionFromSupabase() {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const user = data?.session?.user || null;
+      if (user) {
+        return this.setActiveUserFromSupabase(user);
+      }
+      return null;
+    } catch (e) {
+      console.warn('Erro inicializando sessão do Supabase', e);
+      return null;
+    }
+  },
+
+  async logout() {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error('Erro ao deslogar do Supabase', e);
+    }
+    const user = this.getCurrentUser();
+    if (user) this.addSystemLog('Logout', `${user.name} (${user.email})`);
+    AUTH_CONFIG.activeUserId = null;
+    this.persistSession();
+  },
+
   isAuthenticated() {
     return !!AUTH_CONFIG.activeUserId;
   },
@@ -65,53 +116,32 @@ const ApiService = {
     return { user: this.getCurrentUser() };
   },
 
-  register({ name, email, password, razaoSocial, cnpj }) {
-    const trimmedName = (name || '').trim();
-    const trimmedEmail = (email || '').trim().toLowerCase();
-
-    if (!trimmedName) return { success: false, reason: 'nome_obrigatorio' };
-    if (!trimmedEmail || !trimmedEmail.includes('@') || !trimmedEmail.includes('.')) return { success: false, reason: 'email_invalido' };
+  // Nota: o registro agora é feito via Supabase diretamente do `app.js`.
+  // Mantemos esta função para compatibilidade, mas recomenda-se usar o fluxo do Supabase.
+  async register({ name, email, password, razaoSocial, cnpj }) {
+    if (!name) return { success: false, reason: 'nome_obrigatorio' };
+    if (!email || !email.includes('@')) return { success: false, reason: 'email_invalido' };
     if (!password || password.length < 4) return { success: false, reason: 'senha_curta' };
-    if (AUTH_CONFIG.users.some(u => u.email === trimmedEmail)) return { success: false, reason: 'email_duplicado' };
 
-    const newUser = {
-      id: 'user_' + Math.random().toString(36).substr(2, 9),
-      name: trimmedName,
-      email: trimmedEmail,
-      passwordHash: simpleHash(password),
-      razaoSocial: (razaoSocial || '').trim(),
-      cnpj: (cnpj || '').replace(/\D/g, ''),
-      createdAt: new Date().toLocaleString('pt-BR')
-    };
-
-    AUTH_CONFIG.users.push(newUser);
-    this.persistUsers();
-
-    AUTH_CONFIG.activeUserId = newUser.id;
-    this.persistSession();
-    this.addSystemLog('Conta criada', `${newUser.name} (${newUser.email})`);
-    return { success: true, user: newUser };
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { nome: name, razao_social: razaoSocial, cnpj } }
+    });
+    if (error) return { success: false, reason: error.message };
+    const local = this.setActiveUserFromSupabase(data.user);
+    return { success: true, user: local };
   },
 
-  login({ email, password }) {
-    const trimmedEmail = (email || '').trim().toLowerCase();
-    const user = AUTH_CONFIG.users.find(u => u.email === trimmedEmail);
-
-    if (!user || user.passwordHash !== simpleHash(password || '')) {
+  async login({ email, password }) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { success: false, reason: 'credenciais_invalidas' };
+      const local = this.setActiveUserFromSupabase(data.user);
+      return { success: true, user: local };
+    } catch (e) {
       return { success: false, reason: 'credenciais_invalidas' };
     }
-
-    AUTH_CONFIG.activeUserId = user.id;
-    this.persistSession();
-    this.addSystemLog('Login realizado', `${user.name} (${user.email})`);
-    return { success: true, user };
-  },
-
-  logout() {
-    const user = this.getCurrentUser();
-    if (user) this.addSystemLog('Logout', `${user.name} (${user.email})`);
-    AUTH_CONFIG.activeUserId = null;
-    this.persistSession();
   },
 
   updateProfile({ name, razaoSocial, cnpj }) {
@@ -126,19 +156,42 @@ const ApiService = {
     user.cnpj = (cnpj || '').replace(/\D/g, '');
     this.persistUsers();
     this.addSystemLog('Perfil atualizado', `${user.name}`);
+    // Tenta atualizar metadados no Supabase sem bloquear o fluxo local
+    try {
+      supabase.auth.updateUser({ data: { nome: user.name, razao_social: user.razaoSocial, cnpj: user.cnpj } })
+        .then(({ error }) => { if (error) console.warn('Falha ao atualizar perfil no Supabase', error); })
+    } catch (e) {
+      console.warn('Erro ao sincronizar perfil com Supabase', e);
+    }
     return { success: true, user };
   },
-
-  changePassword({ currentPassword, newPassword }) {
+  async changePassword({ currentPassword, newPassword }) {
     const user = this.getCurrentUser();
     if (!user) return { success: false, reason: 'sem_sessao' };
-    if (user.passwordHash !== simpleHash(currentPassword || '')) return { success: false, reason: 'senha_atual_incorreta' };
     if (!newPassword || newPassword.length < 4) return { success: false, reason: 'senha_curta' };
 
-    user.passwordHash = simpleHash(newPassword);
-    this.persistUsers();
-    this.addSystemLog('Senha alterada', `${user.name}`);
-    return { success: true };
+    // Se o usuário possuir senha local, valida localmente
+    if (user.passwordHash && user.passwordHash === simpleHash(currentPassword || '')) {
+      user.passwordHash = simpleHash(newPassword);
+      this.persistUsers();
+      this.addSystemLog('Senha alterada', `${user.name}`);
+      // tenta também atualizar no Supabase (se aplicável)
+      try { supabase.auth.updateUser({ password: newPassword }).catch(() => {}); } catch (e) {}
+      return { success: true };
+    }
+
+    // Caso contrário, tenta reautenticar via Supabase e atualizar a senha remotamente
+    try {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+      if (signInError) return { success: false, reason: 'senha_atual_incorreta' };
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { success: false, reason: error.message };
+      this.addSystemLog('Senha alterada (Supabase)', `${user.name}`);
+      return { success: true };
+    } catch (e) {
+      console.error('Erro ao alterar senha via Supabase', e);
+      return { success: false, reason: 'erro' };
+    }
   },
 
   // ============================================================
@@ -292,3 +345,6 @@ const ApiService = {
     return { success: true };
   }
 };
+
+export default ApiService;
+window.ApiService = ApiService;

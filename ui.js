@@ -1,6 +1,8 @@
-/**
+﻿/**
  * js/ui.js - Renderização Avançada, Filtros Inteligentes e Copiar Chave/Adicionais
  */
+import ApiService from './api.js';
+
 const NfeUI = {
   // Constrói o visual interno completo com botões funcionais de cópia
   buildDocCard(note) {
@@ -204,6 +206,7 @@ const NfeUI = {
 
   renderTable(notes, userRole, onDeleteCallback, onRowClickCallback) {
     const tbody = document.getElementById('bankTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     notes.forEach(note => {
@@ -230,6 +233,7 @@ const NfeUI = {
 
   renderPagination(totalPages, currentPage, onPageChange) {
     const wrap = document.getElementById('paginationWrap');
+    if (!wrap) return;
     wrap.innerHTML = '';
     if(totalPages <= 1) return;
 
@@ -247,6 +251,7 @@ const NfeUI = {
   renderDashboard(data) {
     const { metrics, statusCounts, ufDist, monthlySeries, riskPct, executive, supplierConcentration, financeiro } = data;
     const dashMount = document.getElementById('dashboardMount');
+    if (!dashMount) return;
     const fmt = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
     // --- Card: Vendas x Despesas (classificação pelo código oficial tpNF da NF-e) ---
@@ -426,3 +431,5 @@ const NfeUI = {
   },
 
 };
+
+export { NfeUI };

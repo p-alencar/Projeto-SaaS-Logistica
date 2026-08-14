@@ -1,4 +1,4 @@
-/**
+﻿/**
  * js/parser.js - Extrator de Dados da NF-e (Informações Adicionais, Pagamento e Ambiente)
  */
 const NfeParser = {
@@ -106,3 +106,5 @@ const NfeParser = {
     };
   }
 };
+
+export { NfeParser };

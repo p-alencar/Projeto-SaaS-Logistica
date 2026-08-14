@@ -1,6 +1,114 @@
-/**
+﻿/**
  * js/app.js - Orquestrador Geral, Filtros Inteligentes e Fechamento Excel
  */
+
+import ApiService from './api.js';
+import { NfeParser } from './parser.js';
+import { NfeUI } from './ui.js';
+
+async function fazerLogin() {
+  const email = document.getElementById('loginEmail').value.trim()
+  const password = document.getElementById('loginPassword').value
+  const errorBox = document.getElementById('loginError')
+  const button = document.getElementById('loginSubmit')
+
+  errorBox.textContent = ''
+
+  if (!email || !password) {
+    errorBox.textContent = 'Preencha o e-mail e a senha.'
+    return false
+  }
+
+  button.disabled = true
+  button.textContent = 'Entrando...'
+
+  const result = await ApiService.login({ email, password })
+
+  button.disabled = false
+  button.textContent = 'Entrar'
+
+  if (!result.success) {
+    console.error('Erro no login:', result);
+    errorBox.textContent = 'E-mail ou senha inválidos.'
+    return false
+  }
+
+  console.log('✅ Login realizado!')
+  console.log('Usuário:', result.user)
+
+  document.getElementById('authScreen').style.display = 'none'
+  document.getElementById('nfeAppRoot').style.display = 'block'
+  return true
+}
+
+document.getElementById('loginPassword').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    fazerLogin()
+  }
+})
+
+async function verificarSessao() {
+  const user = await ApiService.initSessionFromSupabase();
+
+  if (user) {
+    console.log('✅ Usuário já está logado')
+    document.getElementById('authScreen').style.display = 'none'
+    document.getElementById('nfeAppRoot').style.display = 'block'
+  } else {
+    console.log('⚠️ Nenhum usuário logado')
+    document.getElementById('authScreen').style.display = 'flex'
+    document.getElementById('nfeAppRoot').style.display = 'none'
+  }
+}
+
+document.getElementById('btnLogout').addEventListener('click', async () => {
+  await ApiService.logout();
+
+  document.getElementById('authScreen').style.display = 'flex'
+  document.getElementById('nfeAppRoot').style.display = 'none'
+
+  document.getElementById('loginEmail').value = ''
+  document.getElementById('loginPassword').value = ''
+
+  console.log('✅ Logout realizado')
+})
+
+async function criarConta() {
+  const nome = document.getElementById('regName').value.trim()
+  const email = document.getElementById('regEmail').value.trim()
+  const password = document.getElementById('regPassword').value
+  const razaoSocial = document.getElementById('regRazaoSocial').value.trim()
+  const cnpj = document.getElementById('regCnpj').value.trim()
+
+  const errorBox = document.getElementById('registerError')
+  const button = document.getElementById('registerSubmit')
+
+  errorBox.textContent = ''
+
+  if (!nome || !email || !password) {
+    errorBox.textContent = 'Preencha nome, e-mail e senha.'
+    return false
+  }
+
+  button.disabled = true
+  button.textContent = 'Criando conta...'
+
+  const result = await ApiService.register({ name: nome, email, password, razaoSocial, cnpj })
+
+  button.disabled = false
+  button.textContent = 'Criar conta'
+
+  if (!result.success) {
+    console.error('Erro ao criar conta:', result)
+    errorBox.textContent = result.reason || 'Erro ao criar conta.'
+    return false
+  }
+
+  console.log('✅ Usuário criado:', result.user)
+  alert('Conta criada com sucesso!')
+  return true
+}
+
 const App = {
   currentPage: 1,
   limit: 8, 
@@ -8,7 +116,6 @@ const App = {
   currentLoadedNote: null,
   activeViewingChave: null,
 
-  // Armazena as tags dos Filtros Avançados (selects e faixas de data/valor)
   smartFilters: {
     uf: '', cfop: '', status: '', emitente: '', destinatario: '',
     municipio: '', natureza: '', dateFrom: '', dateTo: '', valMin: '', valMax: '', direcao: ''
@@ -24,7 +131,6 @@ const App = {
     this.boot();
   },
 
-  // Inicializa a aplicação principal (chamado após login/registro bem-sucedido ou se já havia sessão salva)
   boot() {
     this.showApp();
     this.setupTopbarUser();
@@ -38,7 +144,6 @@ const App = {
     this.setupCadastroModal();
     this.setupClearDataButton();
 
-    // Deixa disponível no escopo global para o clique dos badges inteligentes
     window.AppTriggerSmartFilter = (type, value) => this.handleSmartFilterToggle(type, value);
   },
 
@@ -52,7 +157,6 @@ const App = {
     document.getElementById('nfeAppRoot').style.display = 'flex';
   },
 
-  // Preenche o nome do usuário logado na topbar e liga o botão de logout / minha conta
   setupTopbarUser() {
     const user = ApiService.getCurrentUser();
     const nameEl = document.getElementById('topbarUserName');
@@ -70,9 +174,6 @@ const App = {
     if (accountBtn) accountBtn.addEventListener('click', () => this.openAccountModal());
   },
 
-  // ============================================================
-  // Tela de Login / Registro
-  // ============================================================
   setupAuthScreen() {
     const loginPanel = document.getElementById('authLoginPanel');
     const registerPanel = document.getElementById('authRegisterPanel');
@@ -88,40 +189,20 @@ const App = {
       loginPanel.style.display = 'block';
     });
 
-    document.getElementById('loginSubmit').addEventListener('click', () => {
-      const email = document.getElementById('loginEmail').value;
-      const password = document.getElementById('loginPassword').value;
-      const errorBox = document.getElementById('loginError');
-
-      const result = ApiService.login({ email, password });
-      if (!result.success) {
-        errorBox.classList.add('show');
-        errorBox.innerText = this.mapAuthError(result.reason);
-        return;
-      }
-      errorBox.classList.remove('show');
-      this.boot();
+    document.getElementById('loginSubmit').addEventListener('click', async () => {
+      const success = await fazerLogin();
+      if (success) this.boot();
     });
 
-    document.getElementById('registerSubmit').addEventListener('click', () => {
-      const name = document.getElementById('regName').value;
-      const email = document.getElementById('regEmail').value;
-      const password = document.getElementById('regPassword').value;
-      const razaoSocial = document.getElementById('regRazaoSocial').value;
-      const cnpj = document.getElementById('regCnpj').value;
-      const errorBox = document.getElementById('registerError');
-
-      const result = ApiService.register({ name, email, password, razaoSocial, cnpj });
-      if (!result.success) {
-        errorBox.classList.add('show');
-        errorBox.innerText = this.mapAuthError(result.reason);
-        return;
+    document.getElementById('registerSubmit').addEventListener('click', async () => {
+      const success = await criarConta();
+      if (success) {
+        this.boot();
+        document.getElementById('authLoginPanel').style.display = 'block';
+        document.getElementById('authRegisterPanel').style.display = 'none';
       }
-      errorBox.classList.remove('show');
-      this.boot();
     });
 
-    // Enter também envia os formulários
     ['loginEmail', 'loginPassword'].forEach(id => {
       document.getElementById(id).addEventListener('keydown', (e) => {
         if (e.key === 'Enter') document.getElementById('loginSubmit').click();
@@ -147,7 +228,6 @@ const App = {
     return map[reason] || 'Não foi possível concluir a operação.';
   },
 
-  // Modal "Minha Conta" — editar nome/razão social/CNPJ e trocar senha
   openAccountModal() {
     const user = ApiService.getCurrentUser();
     if (!user) return;
@@ -161,10 +241,10 @@ const App = {
         </div>
         <div class="nfe-filter-field">
           <label>E-mail</label>
-          <input type="text" value="${user.email}" disabled>
-        </div>
-        <div class="nfe-filter-field">
           <label>Razão Social</label>
+        import ApiService from './api.js';
+        import { NfeParser } from './parser.js';
+        import { NfeUI } from './ui.js';
           <input type="text" id="accRazaoSocial" value="${user.razaoSocial || ''}" placeholder="Nome da sua empresa">
         </div>
         <div class="nfe-filter-field">
@@ -207,12 +287,12 @@ const App = {
       this.refreshCurrentView();
     });
 
-    document.getElementById('accPasswordSubmit').addEventListener('click', () => {
+    document.getElementById('accPasswordSubmit').addEventListener('click', async () => {
       const currentPassword = document.getElementById('accCurrentPassword').value;
       const newPassword = document.getElementById('accNewPassword').value;
       const errorBox = document.getElementById('accPasswordError');
 
-      const result = ApiService.changePassword({ currentPassword, newPassword });
+      const result = await ApiService.changePassword({ currentPassword, newPassword });
       if (!result.success) {
         errorBox.classList.add('show');
         errorBox.innerText = this.mapAuthError(result.reason);
@@ -286,10 +366,9 @@ const App = {
     });
   },
 
-  // Alternador lágico dos filtros inteligentes por badge
   handleSmartFilterToggle(type, value) {
     if (this.smartFilters[type] === value) {
-      this.smartFilters[type] = ''; // Desmarca se clicar de novo
+      this.smartFilters[type] = '';
     } else {
       this.smartFilters[type] = value;
     }
@@ -297,12 +376,10 @@ const App = {
     this.loadBank();
   },
 
-  // Processamento cruzado da Tabela Excel com os Filtros Avançados
   loadBank() {
     const rawNotes = ApiService.getUserNotes();
     const search = document.getElementById('bankSearch').value.toLowerCase();
 
-    // Popula/atualiza as opções dos selects com base no que existe na conta ativa
     this.populateFilterOptions(rawNotes);
 
     const f = this.smartFilters;
@@ -315,7 +392,6 @@ const App = {
                           (n.cnpjDest || '').toLowerCase().includes(search) ||
                           n.chave.toLowerCase().includes(search);
 
-      // Aplicação dos Filtros Avançados (selects e faixas)
       const matchEmitente = !f.emitente || n.emitente === f.emitente;
       const matchDestinatario = !f.destinatario || n.destinatario === f.destinatario;
       const matchUf = !f.uf || n.uf === f.uf;
@@ -352,7 +428,6 @@ const App = {
     });
   },
 
-  // Preenche dinamicamente os selects de Emitente, Destinatário, UF, Município, Status, Natureza e CFOP
   populateFilterOptions(rawNotes) {
     const buildOptions = (id, values, currentValue) => {
       const el = document.getElementById(id);
@@ -372,7 +447,6 @@ const App = {
     buildOptions('filterNatureza', rawNotes.map(n => n.naturezaOperacao), this.smartFilters.natureza);
     buildOptions('filterCfop', rawNotes.map(n => n.cfop), this.smartFilters.cfop);
 
-    // Status usa uma lista fixa (Aprovada / Em Análise / Crítica)
     const statusEl = document.getElementById('filterStatus');
     if (statusEl && !statusEl.dataset.populated) {
       statusEl.innerHTML = `
@@ -385,7 +459,6 @@ const App = {
     }
     if (statusEl) statusEl.value = this.smartFilters.status || '';
 
-    // Direção também usa lista fixa (Emitida / Recebida / Não identificada)
     const direcaoEl = document.getElementById('filterDirecao');
     if (direcaoEl && !direcaoEl.dataset.populated) {
       direcaoEl.innerHTML = `
@@ -399,7 +472,6 @@ const App = {
     if (direcaoEl) direcaoEl.value = this.smartFilters.direcao || '';
   },
 
-  // Conecta os selects e campos de faixa (data/valor) do painel de Filtros Avançados
   setupAdvancedFilters() {
     const selectFieldMap = {
       filterEmitente: 'emitente',
@@ -468,7 +540,6 @@ const App = {
     });
   },
 
-  // Exportação Excel nativa via biblioteca XLSX (Manter Visão de Fechamento da Foto 3)
   setupExcelExport() {
     const btn = document.getElementById('bankExportBtn');
     if(!btn) return;
@@ -480,7 +551,6 @@ const App = {
         return;
       }
 
-      // Mapeamento estruturado das colunas organizadas para Fechamento Fiscal Contábil
       const excelRows = rawNotes.map(n => ({
         'Número': n.numero,
         'Série': n.serie,
@@ -501,13 +571,11 @@ const App = {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Fechamento Fiscal");
       
-      // Realiza o download imediato da planilha estruturada
       const user = ApiService.getCurrentUser();
       XLSX.writeFile(workbook, `Fechamento_Fiscal_${(user && user.name || 'conta').replace(/\s+/g, '_')}.xlsx`);
     });
   },
 
-  // [Chave de Acesso] Cola/digita os 44 dígitos, formata em blocos de 4 e localiza a nota no banco local da conta
   setupChaveConsulta() {
     const input = document.getElementById('chaveConsultaInput');
     const btn = document.getElementById('chaveConsultaBtn');
@@ -560,20 +628,16 @@ const App = {
     if (this.activeTab === 'dashboard') this.loadDashboard();
   },
 
-  // Consolida os indicadores executivos da conta ativa para o Dashboard estilo diretoria
   loadDashboard() {
     const notes = ApiService.getUserNotes();
     const metrics = ApiService.getMetrics();
 
-    // 1) Distribuição por status de triagem (aprovada / em análise / crítica)
     const statusCounts = { 'Aprovada': 0, 'Em Análise': 0, 'Crítica': 0 };
     notes.forEach(n => { if (statusCounts[n.status] !== undefined) statusCounts[n.status]++; });
 
-    // 2) Distribuição geográfica por UF (mantido do dashboard anterior)
     const ufDist = {};
     notes.forEach(n => { if (n.uf) ufDist[n.uf] = (ufDist[n.uf] || 0) + 1; });
 
-    // 3) Série de faturamento mensal (últimos 6 meses com movimentação)
     const monthlyMap = {};
     notes.forEach(n => {
       const d = n.rawDate ? new Date(n.rawDate) : null;
@@ -584,18 +648,15 @@ const App = {
     });
     const monthlySeries = Object.values(monthlyMap).sort((a, b) => a.key.localeCompare(b.key)).slice(-6);
 
-    // 4) Exposição a risco: % do valor total concentrado em notas "Crítica"
     const totalValor = notes.reduce((acc, n) => acc + (parseFloat(n.valorTotal) || 0), 0);
     const valorCritico = notes.filter(n => n.status === 'Crítica').reduce((acc, n) => acc + (parseFloat(n.valorTotal) || 0), 0);
     const riskPct = totalValor > 0 ? Math.round((valorCritico / totalValor) * 100) : 0;
 
-    // 4.1) Classificação financeira pelo código oficial tpNF da NF-e: Venda (Saída) x Despesa (Entrada)
     const totalVendas = notes.filter(n => ApiService.getNoteDirection(n) === 'saida').reduce((acc, n) => acc + (parseFloat(n.valorTotal) || 0), 0);
     const totalDespesas = notes.filter(n => ApiService.getNoteDirection(n) === 'entrada').reduce((acc, n) => acc + (parseFloat(n.valorTotal) || 0), 0);
     const saldo = totalVendas - totalDespesas;
     const indefinidaCount = notes.filter(n => ApiService.getNoteDirection(n) === 'indefinida').length;
 
-    // 5) Resumo executivo (ticket médio, maior nota, ICMS acumulado, ambiente predominante)
     const ticketMedio = notes.length ? totalValor / notes.length : 0;
     const maiorNota = notes.reduce((max, n) => Math.max(max, parseFloat(n.valorTotal) || 0), 0);
     const icmsTotal = notes.reduce((acc, n) => acc + (parseFloat(n.vICMS) || 0), 0);
@@ -603,7 +664,6 @@ const App = {
     notes.forEach(n => { ambienteCounts[n.ambiente] = (ambienteCounts[n.ambiente] || 0) + 1; });
     const ambientePredominante = Object.entries(ambienteCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
 
-    // 6) Concentração por fornecedor (risco de dependência de poucos emitentes)
     const supplierMap = {};
     notes.forEach(n => { supplierMap[n.emitente] = (supplierMap[n.emitente] || 0) + (parseFloat(n.valorTotal) || 0); });
     const supplierEntries = Object.entries(supplierMap).sort((a, b) => b[1] - a[1]);
@@ -630,7 +690,6 @@ const App = {
     closeBtn.addEventListener('click', () => overlay.classList.remove('show'));
   },
 
-  // Engrenagem no topo: abre a zona de risco para limpar as bases locais (localStorage)
   setupClearDataButton() {
     const btn = document.getElementById('btnClearData');
     if (btn) btn.addEventListener('click', () => this.openClearDataModal());
@@ -693,7 +752,6 @@ const App = {
 
       ApiService.clearAllData({ notes, logs, allAccounts });
       document.getElementById('cadastroModalOverlay').classList.remove('show');
-      // Recarrega para reinicializar o app (volta para a tela de login se as contas foram apagadas)
       location.reload();
     });
 
@@ -701,4 +759,4 @@ const App = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => App.init());
+document.addEventListener('DOMContentLoaded', async () => { await verificarSessao(); App.init(); });
