@@ -1,4 +1,4 @@
-﻿/**
+/**
  * js/ui.js - Renderização Avançada, Filtros Inteligentes e Copiar Chave/Adicionais
  */
 import ApiService from './api.js';
@@ -170,9 +170,9 @@ const NfeUI = {
     html += `<div><small style="font-weight:700; color:var(--ink-soft); display:block; margin-bottom:6px; font-size:11px; text-transform:uppercase;">Situação Fiscal</small><div style="display:flex; flex-wrap:wrap; gap:6px;">`;
     Object.entries(status).forEach(([st, qty]) => {
       const active = activeFilters.status === st ? 'box-shadow: 0 0 0 2px var(--ink); font-weight:700;' : '';
-      let badgeStyle = 'background:#EAF6EF; color:var(--brand-dark);';
-      if(st === 'Crítica') badgeStyle = 'background:#FBEEEA; color:var(--danger);';
-      if(st === 'Em Análise') badgeStyle = 'background:#FCF4E7; color:#8F6B1B;';
+      let badgeStyle = 'background:var(--success-bg); color:var(--success);';
+      if(st === 'Crítica') badgeStyle = 'background:var(--danger-bg); color:var(--danger);';
+      if(st === 'Em Análise') badgeStyle = 'background:var(--warning-bg); color:var(--warning);';
       
       html += `<button class="nfe-btn" style="padding:6px 12px; font-size:12px; ${badgeStyle} ${active}" onclick="window.AppTriggerSmartFilter('status', '${st}')">${st} (${qty})</button>`;
     });
@@ -185,8 +185,8 @@ const NfeUI = {
   buildDirectionBadge(note) {
     const direction = ApiService.getNoteDirection(note);
     const map = {
-      saida: { label: 'Venda (Saída)', style: 'background:#EAF6EF; color:var(--brand-dark);', icon: '💰' },
-      entrada: { label: 'Despesa (Entrada)', style: 'background:#FBEEEA; color:var(--danger);', icon: '🧾' },
+      saida: { label: 'Venda (Saída)', style: 'background:var(--success-bg); color:var(--success);', icon: '💰' },
+      entrada: { label: 'Despesa (Entrada)', style: 'background:var(--danger-bg); color:var(--danger);', icon: '🧾' },
       indefinida: { label: 'Não identificada', style: 'background:var(--line-soft); color:var(--ink-soft);', icon: '❓' }
     };
     const info = map[direction] || map.indefinida;
@@ -259,12 +259,12 @@ const NfeUI = {
     const vendasCardHtml = `
       <div class="nfe-dash-stat-row" style="gap:20px;">
         <div class="nfe-dash-stat">
-          <div class="nfe-dash-stat-num" style="color:var(--brand-dark); font-size:22px;">R$ ${fmt(financeiro.totalVendas)}</div>
-          <span class="nfe-dash-pill" style="background:#EAF6EF; color:var(--brand-dark);">💰 VENDAS (SAÍDA)</span>
+          <div class="nfe-dash-stat-num" style="color:var(--success); font-size:22px;">R$ ${fmt(financeiro.totalVendas)}</div>
+          <span class="nfe-dash-pill" style="background:var(--success-bg); color:var(--success);">💰 VENDAS (SAÍDA)</span>
         </div>
         <div class="nfe-dash-stat">
           <div class="nfe-dash-stat-num" style="color:var(--danger); font-size:22px;">R$ ${fmt(financeiro.totalDespesas)}</div>
-          <span class="nfe-dash-pill" style="background:#FBEEEA; color:var(--danger);">🧾 DESPESAS (ENTRADA)</span>
+          <span class="nfe-dash-pill" style="background:var(--danger-bg); color:var(--danger);">🧾 DESPESAS (ENTRADA)</span>
         </div>
         <div class="nfe-dash-stat">
           <div class="nfe-dash-stat-num" style="color:${saldoColor}; font-size:22px;">R$ ${fmt(financeiro.saldo)}</div>
@@ -281,15 +281,15 @@ const NfeUI = {
       <div class="nfe-dash-stat-row">
         <div class="nfe-dash-stat">
           <div class="nfe-dash-stat-num" style="color:var(--brand-dark)">${statusCounts['Aprovada'] || 0}</div>
-          <span class="nfe-dash-pill" style="background:#EAF6EF; color:var(--brand-dark);">APROVADA</span>
+          <span class="nfe-dash-pill" style="background:var(--success-bg); color:var(--success);">APROVADA</span>
         </div>
         <div class="nfe-dash-stat">
-          <div class="nfe-dash-stat-num" style="color:#8F6B1B">${statusCounts['Em Análise'] || 0}</div>
-          <span class="nfe-dash-pill" style="background:#FCF4E7; color:#8F6B1B;">EM ANÁLISE</span>
+          <div class="nfe-dash-stat-num" style="color:var(--warning)">${statusCounts['Em Análise'] || 0}</div>
+          <span class="nfe-dash-pill" style="background:var(--warning-bg); color:var(--warning);">EM ANÁLISE</span>
         </div>
         <div class="nfe-dash-stat">
           <div class="nfe-dash-stat-num" style="color:var(--danger)">${statusCounts['Crítica'] || 0}</div>
-          <span class="nfe-dash-pill" style="background:#FBEEEA; color:var(--danger);">CRÍTICA</span>
+          <span class="nfe-dash-pill" style="background:var(--danger-bg); color:var(--danger);">CRÍTICA</span>
         </div>
       </div>
       <div class="nfe-dash-footnote">${metrics.count} notas fiscais no total desta conta</div>
@@ -400,7 +400,7 @@ const NfeUI = {
     if (!items || items.length === 0) {
       return `<div class="nfe-dash-footnote">Sem dados suficientes para calcular a concentração por fornecedor.</div>`;
     }
-    const colors = ['var(--danger)', 'var(--steel)', 'var(--accent)', 'var(--brand)', '#8F6B1B'];
+    const colors = ['var(--danger)', 'var(--steel)', 'var(--accent)', 'var(--brand)', 'var(--warning)'];
     let cumulative = 0;
     const stops = items.map((it, idx) => {
       const start = cumulative;

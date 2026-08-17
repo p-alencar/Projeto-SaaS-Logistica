@@ -1,21 +1,90 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leitor de NF-e</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Aplica o tema ANTES da primeira pintura. Se isso rodasse só no app.js,
+    // quem usa o tema escuro veria um flash branco a cada carregamento.
+    (function () {
+      try {
+        var salvo = localStorage.getItem('nfe_theme');
+        var escuro = salvo ? salvo === 'dark'
+          : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (escuro) document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
-<div class="auth-screen" id="authScreen">
-  <div class="auth-card">
+<div class="boot-screen" id="bootScreen">
+  <span class="boot-mark">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </span>
+  <span class="boot-bar"><span class="boot-bar-fill"></span></span>
+</div>
+
+<div class="auth-screen" id="authScreen" style="display:none;">
+
+  <aside class="auth-aside">
     <div class="auth-brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L20 8V20C20 21.1 19.1 22 18 22H6C4.9 22 4 21.1 4 20V4C4 2.9 4.9 2 6 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 2V8H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-      <span>Leitor de NF-e</span>
+      <span class="auth-brand-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <p class="auth-brand-name">NF<span>Hub</span></p>
+        <p class="auth-brand-tag">Gestão Fiscal</p>
+      </div>
+    </div>
+
+    <div class="auth-aside-body">
+      <h2 class="auth-pitch">O XML entra.<br>A nota sai legível.</h2>
+      <p class="auth-pitch-sub">Importe o arquivo da NF-e e leia emitente, impostos, itens e transporte sem abrir uma linha de código.</p>
+
+      <div class="auth-features">
+        <div class="auth-feature">
+          <span class="auth-feature-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M7 11l5-5m0 0l5 5m-5-5v13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="auth-feature-text"><b>Leitura completa do XML</b> — impostos, itens, CFOP e frete separados por seção.</span>
+        </div>
+        <div class="auth-feature">
+          <span class="auth-feature-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/></svg>
+          </span>
+          <span class="auth-feature-text"><b>Banco de notas com filtros</b> — busque por chave, CNPJ, período ou valor.</span>
+        </div>
+        <div class="auth-feature">
+          <span class="auth-feature-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.9"/><path d="M4 12a8 8 0 0116 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          </span>
+          <span class="auth-feature-text"><b>Exportação contábil</b> — planilha de fechamento pronta para o contador.</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="auth-aside-foot">Seus arquivos são processados no seu navegador.</p>
+  </aside>
+
+  <div class="auth-card">
+    <button class="theme-toggle auth-theme-toggle" data-theme-toggle title="Alternar tema" aria-label="Alternar tema claro e escuro">
+      <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="auth-brand auth-brand-mobile">
+      <span class="auth-brand-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <div>
+        <p class="auth-brand-name">NF<span>Hub</span></p>
+        <p class="auth-brand-tag">Gestão Fiscal</p>
+      </div>
     </div>
 
     <div id="authLoginPanel">
@@ -47,7 +116,7 @@
       </div>
       <div class="auth-field">
         <label>Senha</label>
-        <input type="password" id="regPassword" placeholder="Mínimo 4 caracteres" autocomplete="new-password">
+        <input type="password" id="regPassword" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
       </div>
       <div class="auth-field">
         <label>Razão Social (opcional)</label>
@@ -62,41 +131,96 @@
       <p class="auth-switch">Já tem conta? <a href="#" id="goToLogin">Entrar</a></p>
     </div>
   </div>
+
 </div>
 
 <div class="nfe-app" id="nfeAppRoot" style="display:none;">
-
-  <div style="background: var(--brand-dark); color: white; padding: 10px 24px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); font-family: 'Inter', sans-serif;">
-    <div>🚀 <b>Leitor de NF-e</b></div>
-    <div style="display: flex; gap: 14px; align-items: center;">
-      <button id="btnMyAccount" class="saas-gear-btn" style="width:auto; padding:6px 12px; gap:6px; font-weight:600;" title="Minha conta">
-        <span id="topbarUserName">Minha conta</span>
-      </button>
-      <button id="btnClearData" class="saas-gear-btn" title="Limpar bases de dados">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button id="btnLogout" class="saas-gear-btn" style="width:auto; padding:6px 12px;" title="Sair da conta">Sair</button>
-    </div>
-  </div>
-
   <div class="nfe-shell">
+
     <aside class="nfe-sidebar">
-      <div class="nfe-side-logo">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 2H14L20 8V20C20 21.1 19.1 22 18 22H6C4.9 22 4 21.1 4 20V4C4 2.9 4.9 2 6 2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 2V8H20" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <!-- Marca -->
+      <div class="nfe-side-brand">
+        <div class="nfe-side-mark">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="nfe-side-name">NF<span>Hub</span></p>
+          <p class="nfe-side-tag">Gestão Fiscal</p>
+        </div>
       </div>
-      <button class="nfe-side-btn active" data-tab="import" title="Importação de Notas">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4L7 9M12 4L17 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Importar
-      </button>
-      <button class="nfe-side-btn" data-tab="bank" title="Banco de Notas">
-        <svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="5" rx="8" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M4 5V19C4 20.66 7.58 22 12 22C16.42 22 20 20.66 20 19V5" stroke="currentColor" stroke-width="1.8"/><path d="M4 12C4 13.66 7.58 15 12 15C16.42 15 20 13.66 20 12" stroke="currentColor" stroke-width="1.8"/></svg>
-        Notas
-      </button>
-      <button class="nfe-side-btn" data-tab="dashboard" title="Dashboard Financeiro">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Dashboard
-      </button>
+
+      <!-- Empresa da conta -->
+      <div class="nfe-side-org">
+        <button class="nfe-org-btn" id="btnMyAccount" title="Minha conta">
+          <span class="nfe-org-mark" id="orgInitials">··</span>
+          <span class="nfe-org-info">
+            <span class="nfe-org-name" id="orgName">Minha empresa</span>
+            <span class="nfe-org-doc" id="orgDoc">CNPJ não informado</span>
+          </span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Navegação -->
+      <nav class="nfe-side-nav">
+        <p class="nfe-nav-label">Menu Principal</p>
+
+        <button class="nfe-side-btn active" data-tab="import" title="Importação de Notas">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M7 11l5-5m0 0l5 5m-5-5v13" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Importar XML
+        </button>
+        <button class="nfe-side-btn" data-tab="bank" title="Banco de Notas">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Notas Fiscais
+        </button>
+        <button class="nfe-side-btn" data-tab="dashboard" title="Dashboard Financeiro">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.75"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.75"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.75"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.75"/></svg>
+          Dashboard
+        </button>
+
+        <div class="nfe-nav-divider"></div>
+        <p class="nfe-nav-label">Configurações</p>
+
+        <button class="nfe-side-btn" id="btnClearData" title="Limpar bases de dados">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Limpar dados
+        </button>
+        <div class="nfe-side-theme">
+          <span>Tema escuro</span>
+          <button class="theme-toggle" data-theme-toggle title="Alternar tema" aria-label="Alternar tema claro e escuro">
+            <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Usuário logado -->
+      <div class="nfe-side-user">
+        <span class="nfe-user-avatar" id="topbarAvatar">·</span>
+        <span class="nfe-user-info">
+          <span class="nfe-user-name" id="topbarUserName">Minha conta</span>
+          <span class="nfe-user-role" id="topbarUserMail">conta ativa</span>
+        </span>
+        <button class="nfe-user-exit" id="btnLogout" title="Sair da conta">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
     </aside>
+
+    <div class="nfe-content">
+      <!-- Barra superior -->
+      <header class="nfe-topbar">
+        <div class="nfe-topbar-head">
+          <h1 class="nfe-topbar-title" id="topbarTitle">Importar XML</h1>
+          <p class="nfe-topbar-sub" id="topbarSub">Leitura local do arquivo da nota</p>
+        </div>
+        <div class="nfe-topbar-actions">
+          <span class="nfe-env-chip">
+            <span class="nfe-env-dot"></span>
+            Processamento local
+          </span>
+        </div>
+      </header>
 
     <div class="nfe-main">
       <section class="nfe-tab-panel active" id="tabImport">
@@ -241,6 +365,15 @@
       <section class="nfe-tab-panel" id="tabDashboard">
         <div class="nfe-bank-wrap" id="dashboardMount"></div>
       </section>
+    </div>
+
+      <footer class="nfe-footer">
+        <span class="nfe-footer-version">Leitor de NF-e v0.2 · Processamento local no navegador</span>
+        <span class="nfe-footer-status">
+          <span class="nfe-footer-dot"></span>
+          Sistema operacional
+        </span>
+      </footer>
     </div>
   </div>
 

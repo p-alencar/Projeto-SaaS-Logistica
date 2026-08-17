@@ -1,4 +1,4 @@
-﻿/**
+/**
  * js/api.js - Autenticação Local (Login / Registro) e Banco de Dados por Conta
  */
 import { supabase } from './src/lib/supabase.js'
@@ -119,28 +119,64 @@ const ApiService = {
   // Nota: o registro agora é feito via Supabase diretamente do `app.js`.
   // Mantemos esta função para compatibilidade, mas recomenda-se usar o fluxo do Supabase.
   async register({ name, email, password, razaoSocial, cnpj }) {
-    if (!name) return { success: false, reason: 'nome_obrigatorio' };
+    if (!name || !name.trim()) return { success: false, reason: 'nome_obrigatorio' };
     if (!email || !email.includes('@')) return { success: false, reason: 'email_invalido' };
-    if (!password || password.length < 4) return { success: false, reason: 'senha_curta' };
+    if (!password || password.length < 6) return { success: false, reason: 'senha_curta' };
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
-      options: { data: { nome: name, razao_social: razaoSocial, cnpj } }
+      options: { data: { nome: name.trim(), razao_social: razaoSocial, cnpj } }
     });
-    if (error) return { success: false, reason: error.message };
+    if (error) return { success: false, reason: this.mapSupabaseError(error) };
+
+    // Com "Confirm email" ligado no Supabase, o signUp devolve o usuário mas NÃO devolve
+    // sessão. Entrar no app aqui deixaria a pessoa numa sessão fantasma: a tela abre, mas
+    // nenhuma chamada autenticada funciona. Nesse caso pedimos a confirmação por e-mail.
+    if (!data.session) {
+      return { success: false, reason: 'confirmar_email', pending: true };
+    }
+
     const local = this.setActiveUserFromSupabase(data.user);
     return { success: true, user: local };
   },
 
+  // Traduz as mensagens cruas do Supabase (inglês) para os códigos que a interface conhece
+  mapSupabaseError(error) {
+    const msg = (error && error.message ? error.message : '').toLowerCase();
+    if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) return 'email_duplicado';
+    if (msg.includes('password') && msg.includes('6')) return 'senha_curta';
+    if (msg.includes('password')) return 'senha_fraca';
+    if (msg.includes('invalid') && msg.includes('email')) return 'email_invalido';
+    if (msg.includes('rate limit') || msg.includes('too many')) return 'muitas_tentativas';
+    if (msg.includes('network') || msg.includes('fetch')) return 'sem_conexao';
+    return error && error.message ? error.message : 'erro';
+  },
+
   async login({ email, password }) {
+    if (!email || !password) return { success: false, reason: 'campos_vazios' };
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { success: false, reason: 'credenciais_invalidas' };
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password
+      });
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        // Sem confirmar o e-mail o Supabase recusa o login — a pessoa precisa saber disso
+        if (msg.includes('not confirmed') || msg.includes('email not confirmed')) {
+          return { success: false, reason: 'email_nao_confirmado' };
+        }
+        if (msg.includes('rate limit') || msg.includes('too many')) {
+          return { success: false, reason: 'muitas_tentativas' };
+        }
+        return { success: false, reason: 'credenciais_invalidas' };
+      }
       const local = this.setActiveUserFromSupabase(data.user);
       return { success: true, user: local };
     } catch (e) {
-      return { success: false, reason: 'credenciais_invalidas' };
+      // Exceção aqui é falha de rede, não senha errada — dizer "senha incorreta" confunde
+      console.error('Falha de conexão no login', e);
+      return { success: false, reason: 'sem_conexao' };
     }
   },
 
@@ -168,7 +204,7 @@ const ApiService = {
   async changePassword({ currentPassword, newPassword }) {
     const user = this.getCurrentUser();
     if (!user) return { success: false, reason: 'sem_sessao' };
-    if (!newPassword || newPassword.length < 4) return { success: false, reason: 'senha_curta' };
+    if (!newPassword || newPassword.length < 6) return { success: false, reason: 'senha_curta' };
 
     // Se o usuário possuir senha local, valida localmente
     if (user.passwordHash && user.passwordHash === simpleHash(currentPassword || '')) {
@@ -322,7 +358,7 @@ const ApiService = {
   // ============================================================
   // [REQUISITO: Engrenagem "Limpar Bases"]
   // ============================================================
-  clearAllData({ notes = true, logs = true, allAccounts = false } = {}) {
+  async clearAllData({ notes = true, logs = true, allAccounts = false } = {}) {
     if (allAccounts) {
       localStorage.removeItem(USERS_KEY);
       localStorage.removeItem(NOTES_KEY);
@@ -330,6 +366,9 @@ const ApiService = {
       localStorage.removeItem(SESSION_KEY);
       AUTH_CONFIG.users = [];
       AUTH_CONFIG.activeUserId = null;
+      // Sem isto a sessão do Supabase sobrevive (fica em chaves sb-*) e o reload
+      // reconecta a pessoa sozinho, parecendo que a limpeza não funcionou
+      try { await supabase.auth.signOut(); } catch (e) { console.warn('Falha ao encerrar sessão', e); }
     } else {
       const user = this.getCurrentUser();
       if (notes && user) {

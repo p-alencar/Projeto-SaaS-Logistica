@@ -1,113 +1,10 @@
-﻿/**
+/**
  * js/app.js - Orquestrador Geral, Filtros Inteligentes e Fechamento Excel
  */
 
 import ApiService from './api.js';
 import { NfeParser } from './parser.js';
 import { NfeUI } from './ui.js';
-
-async function fazerLogin() {
-  const email = document.getElementById('loginEmail').value.trim()
-  const password = document.getElementById('loginPassword').value
-  const errorBox = document.getElementById('loginError')
-  const button = document.getElementById('loginSubmit')
-
-  errorBox.textContent = ''
-
-  if (!email || !password) {
-    errorBox.textContent = 'Preencha o e-mail e a senha.'
-    return false
-  }
-
-  button.disabled = true
-  button.textContent = 'Entrando...'
-
-  const result = await ApiService.login({ email, password })
-
-  button.disabled = false
-  button.textContent = 'Entrar'
-
-  if (!result.success) {
-    console.error('Erro no login:', result);
-    errorBox.textContent = 'E-mail ou senha inválidos.'
-    return false
-  }
-
-  console.log('✅ Login realizado!')
-  console.log('Usuário:', result.user)
-
-  document.getElementById('authScreen').style.display = 'none'
-  document.getElementById('nfeAppRoot').style.display = 'block'
-  return true
-}
-
-document.getElementById('loginPassword').addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') {
-    fazerLogin()
-  }
-})
-
-async function verificarSessao() {
-  const user = await ApiService.initSessionFromSupabase();
-
-  if (user) {
-    console.log('✅ Usuário já está logado')
-    document.getElementById('authScreen').style.display = 'none'
-    document.getElementById('nfeAppRoot').style.display = 'block'
-  } else {
-    console.log('⚠️ Nenhum usuário logado')
-    document.getElementById('authScreen').style.display = 'flex'
-    document.getElementById('nfeAppRoot').style.display = 'none'
-  }
-}
-
-document.getElementById('btnLogout').addEventListener('click', async () => {
-  await ApiService.logout();
-
-  document.getElementById('authScreen').style.display = 'flex'
-  document.getElementById('nfeAppRoot').style.display = 'none'
-
-  document.getElementById('loginEmail').value = ''
-  document.getElementById('loginPassword').value = ''
-
-  console.log('✅ Logout realizado')
-})
-
-async function criarConta() {
-  const nome = document.getElementById('regName').value.trim()
-  const email = document.getElementById('regEmail').value.trim()
-  const password = document.getElementById('regPassword').value
-  const razaoSocial = document.getElementById('regRazaoSocial').value.trim()
-  const cnpj = document.getElementById('regCnpj').value.trim()
-
-  const errorBox = document.getElementById('registerError')
-  const button = document.getElementById('registerSubmit')
-
-  errorBox.textContent = ''
-
-  if (!nome || !email || !password) {
-    errorBox.textContent = 'Preencha nome, e-mail e senha.'
-    return false
-  }
-
-  button.disabled = true
-  button.textContent = 'Criando conta...'
-
-  const result = await ApiService.register({ name: nome, email, password, razaoSocial, cnpj })
-
-  button.disabled = false
-  button.textContent = 'Criar conta'
-
-  if (!result.success) {
-    console.error('Erro ao criar conta:', result)
-    errorBox.textContent = result.reason || 'Erro ao criar conta.'
-    return false
-  }
-
-  console.log('✅ Usuário criado:', result.user)
-  alert('Conta criada com sucesso!')
-  return true
-}
 
 const App = {
   currentPage: 1,
@@ -121,8 +18,16 @@ const App = {
     municipio: '', natureza: '', dateFrom: '', dateTo: '', valMin: '', valMax: '', direcao: ''
   },
 
-  init() {
+  // Guarda para não montar a aplicação duas vezes (login + registro chamam boot)
+  booted: false,
+
+  async init() {
+    this.setupTheme();
     this.setupAuthScreen();
+
+    // Aguarda o Supabase responder ANTES de decidir a tela, senão o login
+    // pisca por um instante para quem já está logado
+    await ApiService.initSessionFromSupabase();
 
     if (!ApiService.isAuthenticated()) {
       this.showAuthScreen();
@@ -133,6 +38,14 @@ const App = {
 
   boot() {
     this.showApp();
+
+    // Os listeners só podem ser registrados uma vez
+    if (this.booted) {
+      this.renderSidebarIdentity();
+      return;
+    }
+    this.booted = true;
+
     this.setupTopbarUser();
     this.setupTabs();
     this.setupUpload();
@@ -148,24 +61,26 @@ const App = {
   },
 
   showAuthScreen() {
-    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('authScreen').style.display = 'grid';
     document.getElementById('nfeAppRoot').style.display = 'none';
+    document.body.classList.add('is-ready');
   },
 
   showApp() {
     document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('nfeAppRoot').style.display = 'flex';
+    document.getElementById('nfeAppRoot').style.display = 'block';
+    document.body.classList.add('is-ready');
   },
 
   setupTopbarUser() {
-    const user = ApiService.getCurrentUser();
-    const nameEl = document.getElementById('topbarUserName');
-    if (nameEl && user) nameEl.innerText = user.name;
+    this.renderSidebarIdentity();
 
     const logoutBtn = document.getElementById('btnLogout');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
-        ApiService.logout();
+      logoutBtn.addEventListener('click', async () => {
+        logoutBtn.disabled = true;
+        // Sem o await, o reload cortava a chamada e a sessão continuava viva
+        await ApiService.logout();
         location.reload();
       });
     }
@@ -174,33 +89,153 @@ const App = {
     if (accountBtn) accountBtn.addEventListener('click', () => this.openAccountModal());
   },
 
+  // Preenche o cartão da empresa e o rodapé de usuário da barra lateral
+  renderSidebarIdentity() {
+    const user = ApiService.getCurrentUser();
+    if (!user) return;
+
+    const set = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+
+    // Empresa da conta (razão social e CNPJ vêm do perfil)
+    const org = (user.razaoSocial || '').trim();
+    set('orgName', org || 'Empresa não informada');
+    set('orgDoc', user.cnpj ? 'CNPJ: ' + this.formatCnpj(user.cnpj) : 'CNPJ não informado');
+    set('orgInitials', this.initials(org || user.name));
+
+    // Usuário logado
+    set('topbarUserName', user.name);
+    set('topbarUserMail', user.email || 'conta ativa');
+    set('topbarAvatar', (user.name || '?').trim().charAt(0));
+  },
+
+  initials(texto) {
+    const partes = (texto || '').trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return '··';
+    if (partes.length === 1) return partes[0].slice(0, 2);
+    return (partes[0][0] + partes[partes.length - 1][0]);
+  },
+
+  formatCnpj(raw) {
+    const c = (raw || '').replace(/\D/g, '');
+    if (c.length !== 14) return raw;
+    return c.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  },
+
+  // O tema já foi aplicado pelo script do <head>; aqui só ligamos os botões.
+  setupTheme() {
+    const aplicar = (escuro) => {
+      document.documentElement.setAttribute('data-theme', escuro ? 'dark' : 'light');
+      try { localStorage.setItem('nfe_theme', escuro ? 'dark' : 'light'); } catch (e) {}
+      document.querySelectorAll('[data-theme-toggle]').forEach(b => {
+        b.setAttribute('aria-pressed', String(escuro));
+        b.title = escuro ? 'Mudar para tema claro' : 'Mudar para tema escuro';
+      });
+    };
+
+    const estaEscuro = () => document.documentElement.getAttribute('data-theme') === 'dark';
+    aplicar(estaEscuro());
+
+    document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => aplicar(!estaEscuro()));
+    });
+
+    // Acompanha o sistema enquanto a pessoa não tiver escolhido manualmente
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', (e) => {
+      let temEscolha = false;
+      try { temEscolha = !!localStorage.getItem('nfe_theme'); } catch (err) {}
+      if (!temEscolha) aplicar(e.matches);
+    });
+  },
+
   setupAuthScreen() {
     const loginPanel = document.getElementById('authLoginPanel');
     const registerPanel = document.getElementById('authRegisterPanel');
 
+    const limparAvisos = () => {
+      ['loginError', 'registerError'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('show', 'is-info'); el.innerText = ''; }
+      });
+    };
+
     document.getElementById('goToRegister').addEventListener('click', (e) => {
       e.preventDefault();
+      limparAvisos();
       loginPanel.style.display = 'none';
       registerPanel.style.display = 'block';
     });
     document.getElementById('goToLogin').addEventListener('click', (e) => {
       e.preventDefault();
+      limparAvisos();
       registerPanel.style.display = 'none';
       loginPanel.style.display = 'block';
     });
 
     document.getElementById('loginSubmit').addEventListener('click', async () => {
-      const success = await fazerLogin();
-      if (success) this.boot();
+      const btn = document.getElementById('loginSubmit');
+      const errorBox = document.getElementById('loginError');
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      errorBox.classList.remove('show');
+      errorBox.innerText = '';
+
+      if (!email || !password) {
+        errorBox.classList.add('show');
+        errorBox.innerText = 'Preencha o e-mail e a senha.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Entrando...';
+      const result = await ApiService.login({ email, password });
+      btn.disabled = false;
+      btn.innerText = 'Entrar';
+
+      if (!result.success) {
+        errorBox.classList.add('show');
+        errorBox.innerText = this.mapAuthError(result.reason);
+        return;
+      }
+      this.boot();
     });
 
     document.getElementById('registerSubmit').addEventListener('click', async () => {
-      const success = await criarConta();
-      if (success) {
-        this.boot();
-        document.getElementById('authLoginPanel').style.display = 'block';
-        document.getElementById('authRegisterPanel').style.display = 'none';
+      const btn = document.getElementById('registerSubmit');
+      const errorBox = document.getElementById('registerError');
+
+      errorBox.classList.remove('show');
+      errorBox.innerText = '';
+
+      btn.disabled = true;
+      btn.innerText = 'Criando conta...';
+      const result = await ApiService.register({
+        name: document.getElementById('regName').value,
+        email: document.getElementById('regEmail').value,
+        password: document.getElementById('regPassword').value,
+        razaoSocial: document.getElementById('regRazaoSocial').value,
+        cnpj: document.getElementById('regCnpj').value
+      });
+      btn.disabled = false;
+      btn.innerText = 'Criar conta';
+
+      if (!result.success) {
+        // Conta criada, mas o Supabase exige confirmar o e-mail antes do primeiro acesso
+        if (result.pending) {
+          registerPanel.style.display = 'none';
+          loginPanel.style.display = 'block';
+          const loginErr = document.getElementById('loginError');
+          loginErr.classList.add('show', 'is-info');
+          loginErr.innerText = 'Conta criada. Confirme o e-mail que enviamos e depois entre aqui.';
+          document.getElementById('loginEmail').value = document.getElementById('regEmail').value.trim();
+          return;
+        }
+        errorBox.classList.add('show');
+        errorBox.innerText = this.mapAuthError(result.reason);
+        return;
       }
+      this.boot();
     });
 
     ['loginEmail', 'loginPassword'].forEach(id => {
@@ -219,9 +254,14 @@ const App = {
     const map = {
       nome_obrigatorio: 'O nome é obrigatório.',
       email_invalido: 'Informe um e-mail válido.',
-      senha_curta: 'A senha deve ter ao menos 4 caracteres.',
+      senha_curta: 'A senha deve ter ao menos 6 caracteres.',
+      senha_fraca: 'Escolha uma senha mais forte.',
       email_duplicado: 'Já existe uma conta com este e-mail.',
       credenciais_invalidas: 'E-mail ou senha incorretos.',
+      email_nao_confirmado: 'Confirme o e-mail que enviamos antes de entrar.',
+      muitas_tentativas: 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.',
+      sem_conexao: 'Não foi possível conectar ao servidor. Verifique sua internet.',
+      campos_vazios: 'Preencha o e-mail e a senha.',
       senha_atual_incorreta: 'A senha atual informada está incorreta.',
       sem_sessao: 'Sua sessão expirou. Faça login novamente.'
     };
@@ -241,10 +281,10 @@ const App = {
         </div>
         <div class="nfe-filter-field">
           <label>E-mail</label>
+          <input type="text" value="${user.email}" disabled>
+        </div>
+        <div class="nfe-filter-field">
           <label>Razão Social</label>
-        import ApiService from './api.js';
-        import { NfeParser } from './parser.js';
-        import { NfeUI } from './ui.js';
           <input type="text" id="accRazaoSocial" value="${user.razaoSocial || ''}" placeholder="Nome da sua empresa">
         </div>
         <div class="nfe-filter-field">
@@ -282,7 +322,7 @@ const App = {
         errorBox.innerText = this.mapAuthError(result.reason);
         return;
       }
-      document.getElementById('topbarUserName').innerText = result.user.name;
+      this.renderSidebarIdentity();
       document.getElementById('cadastroModalOverlay').classList.remove('show');
       this.refreshCurrentView();
     });
@@ -307,13 +347,31 @@ const App = {
     document.getElementById('cadastroModalOverlay').classList.add('show');
   },
 
+  // Rótulos da barra superior por aba
+  TAB_HEAD: {
+    import:    { title: 'Importar XML',   sub: 'Leitura local do arquivo da nota' },
+    bank:      { title: 'Notas Fiscais',  sub: 'Consulta e análise detalhada de NF-e' },
+    dashboard: { title: 'Dashboard',      sub: 'Visão geral das notas da sua conta' }
+  },
+
+  setTopbarHead(tab) {
+    const head = this.TAB_HEAD[tab];
+    if (!head) return;
+    const t = document.getElementById('topbarTitle');
+    const s = document.getElementById('topbarSub');
+    if (t) t.innerText = head.title;
+    if (s) s.innerText = head.sub;
+  },
+
   setupTabs() {
-    document.querySelectorAll('.nfe-side-btn').forEach(btn => {
+    // Só botões com data-tab trocam de aba; os demais (ex.: Limpar dados) têm ação própria
+    document.querySelectorAll('.nfe-side-btn[data-tab]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.nfe-side-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
+
         this.activeTab = btn.dataset.tab;
+        this.setTopbarHead(this.activeTab);
         document.querySelectorAll('.nfe-tab-panel').forEach(p => p.classList.remove('active'));
 
         if (this.activeTab === 'import') document.getElementById('tabImport').classList.add('active');
@@ -738,7 +796,7 @@ const App = {
       submitBtn.style.pointerEvents = active ? 'auto' : 'none';
     });
 
-    submitBtn.addEventListener('click', () => {
+    submitBtn.addEventListener('click', async () => {
       const notes = document.getElementById('clearNotes').checked;
       const logs = document.getElementById('clearLogs').checked;
       const allAccounts = document.getElementById('clearAllAccounts').checked;
@@ -750,7 +808,10 @@ const App = {
         return;
       }
 
-      ApiService.clearAllData({ notes, logs, allAccounts });
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Apagando...';
+      // Sem o await o reload cortava o signOut e a sessão voltava sozinha
+      await ApiService.clearAllData({ notes, logs, allAccounts });
       document.getElementById('cadastroModalOverlay').classList.remove('show');
       location.reload();
     });
@@ -759,4 +820,4 @@ const App = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', async () => { await verificarSessao(); App.init(); });
+document.addEventListener('DOMContentLoaded', () => App.init());
