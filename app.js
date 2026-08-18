@@ -39,6 +39,7 @@ const App = {
   boot() {
     this.showApp();
 
+    // os listeners 
     // Os listeners só podem ser registrados uma vez
     if (this.booted) {
       this.renderSidebarIdentity();
